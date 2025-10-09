@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+/.react-router/
+/.wrangler/
+/playwright-report/
+/test-results/
+
+# Generated files
+worker-configuration.d.ts
+package-lock.json
+
+# Logs
+*.log 

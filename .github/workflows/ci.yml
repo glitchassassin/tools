@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Install Node.js and dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run type check
+        run: npm run typecheck
+
+      - name: Build application
+        run: npm run build
+
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Install Node.js and dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+  deploy-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: false
+    # if: github.event_name == 'pull_request'
+    needs: [ci, playwright]
+    outputs:
+      preview-url: ${{ steps.extract-url.outputs.preview-url }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Install Node.js and dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: Upload version to Cloudflare
+        id: upload
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload --tag pr-${{ github.event.number }}
+
+      - name: Extract preview URL
+        id: extract-url
+        env:
+          CMD_OUTPUT: ${{ steps.upload.outputs.command-output }}
+        run: |
+          # Extract the preview URL from the output
+          PREVIEW_URL=$(echo "$CMD_OUTPUT" | grep -o "Version Preview URL: https://[^ ]*" | cut -d' ' -f4)
+          echo "preview-url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          echo "Preview URL: $PREVIEW_URL"
+
+          # Output to step summary
+          echo "## 🚀 Preview Environment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Preview URL:** [$PREVIEW_URL]($PREVIEW_URL)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment PR with preview URL
+        if: steps.extract-url.outputs.preview-url != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment ${{ github.event.number }} --body "🚀 **Preview Environment Ready!**
+
+          Your changes are deployed and ready for testing:
+
+          **Preview URL:** ${{ steps.extract-url.outputs.preview-url }}
+
+          This preview will be available until the PR is merged or closed."
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: false
+    # if:
+    #   github.event_name == 'push' && (github.ref == 'refs/heads/main' ||
+    #   github.ref == 'refs/heads/master')
+    needs: [ci, playwright]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Install Node.js and dependencies
+        uses: bahmutov/npm-install@v1
+
+      - name: Deploy to production
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+
+      - name: Output deployment success
+        run: |
+          echo "✅ Production deployment successful!"
+
+          # Output to step summary
+          echo "## 🎉 Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Status:** Successfully deployed to production" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,53 @@
+version: 2
+updates:
+  # npm dependencies
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    # Group by update types
+    groups:
+      # Group minor updates
+      minor-updates:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+
+      # Group major updates
+      major-updates:
+        patterns:
+          - '*'
+        update-types:
+          - 'major'
+
+      # Group patch updates for auto-merge
+      patch-updates:
+        patterns:
+          - '*'
+        update-types:
+          - 'patch'
+
+    # Auto-merge patch updates
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
+
+  # GitHub Actions dependencies
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
