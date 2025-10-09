@@ -18,6 +18,10 @@ concise e2e tests that check the feature's acceptance criteria. Prefer to
 combine tests that cover the same path through the app. Write tests that cover
 the feature's "happy path" as well as error scenarios.
 
+End-to-end tests should NEVER use CSS selectors, to avoid coupling things too
+tightly to the DOM/styling. Use label/role based selectors, or if necessary, add
+test IDs.
+
 ## Components
 
 Wherever it makes sense, extract reusable components into app/components. This

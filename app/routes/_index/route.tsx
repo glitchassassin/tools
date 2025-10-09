@@ -43,7 +43,7 @@ export default function Home() {
 					<ToolCard
 						name="Workout Tracker"
 						summary="Get strong with a simple 5x5 lifting program."
-						to="/tools/workout-tracker"
+						to="/tools/workout"
 					/>
 					<ToolCard
 						name="Dry-Fire Trainer"
