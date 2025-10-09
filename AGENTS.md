@@ -12,11 +12,11 @@ Follow this to-do list for every feature:
 
 ## End-to-End Tests
 
-The app uses Playwright for e2e tests. You can run tests with
-`npm run test:e2e`. When implementing a feature, write concise e2e tests that
-check the feature's acceptance criteria. Prefer to combine tests that cover the
-same path through the app. Write tests that cover the feature's "happy path" as
-well as error scenarios.
+The app uses Playwright for e2e tests. You can run tests with `npm run test:e2e`
+(this only works outside the sandbox). When implementing a feature, write
+concise e2e tests that check the feature's acceptance criteria. Prefer to
+combine tests that cover the same path through the app. Write tests that cover
+the feature's "happy path" as well as error scenarios.
 
 ## Components
 
