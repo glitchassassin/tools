@@ -16,7 +16,7 @@
     "lint:fix": "eslint . --fix",
     "postinstall": "npm run cf-typegen",
     "preview": "npm run build && vite preview",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --reporter line",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "typecheck": "npm run cf-typegen && react-router typegen && tsc -b"
