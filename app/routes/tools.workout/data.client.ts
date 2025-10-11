@@ -1,5 +1,5 @@
 import { format as formatDate, isValid, parse } from 'date-fns'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { z } from 'zod'
 import { declareModel } from '~/hooks/declareModel'
 import { useLocalData } from '~/hooks/useLocalData.client'
@@ -39,9 +39,11 @@ const WorkoutConfigSchema = z.object({
 	plates: z.array(z.number().positive().max(200)).min(1),
 })
 
+const WorkoutEntriesSchema = z.record(z.string(), WorkoutEntrySchema)
+
 const WorkoutTrackerSchema = z.object({
 	config: WorkoutConfigSchema,
-	workouts: z.record(z.string(), WorkoutEntrySchema).default({}),
+	workouts: WorkoutEntriesSchema,
 })
 
 export type WorkoutTrackerData = z.infer<typeof WorkoutTrackerSchema>
@@ -50,40 +52,56 @@ export type WorkoutExerciseConfig = z.infer<typeof WorkoutExerciseConfigSchema>
 export type WorkoutEntry = z.infer<typeof WorkoutEntrySchema>
 export type WorkoutExerciseEntry = z.infer<typeof WorkoutExerciseEntrySchema>
 
-const DEFAULT_DATA: WorkoutTrackerData = {
-	config: {
-		templates: [
-			{
-				id: 'workout-a',
-				name: 'Workout A',
-				exercises: [
-					{ id: 'squat', name: 'Squat', setCount: 5 },
-					{ id: 'overhead-press', name: 'Overhead Press', setCount: 5 },
-					{ id: 'deadlift', name: 'Deadlift', setCount: 1 },
-				],
-			},
-			{
-				id: 'workout-b',
-				name: 'Workout B',
-				exercises: [
-					{ id: 'squat', name: 'Squat', setCount: 5 },
-					{ id: 'bench-press', name: 'Bench Press', setCount: 5 },
-					{ id: 'barbell-row', name: 'Barbell Row', setCount: 5 },
-				],
-			},
-		],
-		bonusLabel: 'Pull-ups',
-		plates: [45, 35, 25, 10, 5, 2.5],
-	},
-	workouts: {},
+const DEFAULT_CONFIG: WorkoutTrackerData['config'] = {
+	templates: [
+		{
+			id: 'workout-a',
+			name: 'Workout A',
+			exercises: [
+				{ id: 'squat', name: 'Squat', setCount: 5 },
+				{ id: 'overhead-press', name: 'Overhead Press', setCount: 5 },
+				{ id: 'deadlift', name: 'Deadlift', setCount: 1 },
+			],
+		},
+		{
+			id: 'workout-b',
+			name: 'Workout B',
+			exercises: [
+				{ id: 'squat', name: 'Squat', setCount: 5 },
+				{ id: 'bench-press', name: 'Bench Press', setCount: 5 },
+				{ id: 'barbell-row', name: 'Barbell Row', setCount: 5 },
+			],
+		},
+	],
+	bonusLabel: 'Pull-ups',
+	plates: [45, 35, 25, 10, 5, 2.5],
 }
+
+const DEFAULT_WORKOUTS: WorkoutTrackerData['workouts'] = {}
+
+const DEFAULT_DATA: WorkoutTrackerData = {
+	config: DEFAULT_CONFIG,
+	workouts: DEFAULT_WORKOUTS,
+}
+
+const WorkoutConfigModel = declareModel({
+	model: WorkoutConfigSchema,
+	defaultValue: DEFAULT_CONFIG,
+})
+
+const WorkoutEntriesModel = declareModel({
+	model: WorkoutEntriesSchema,
+	defaultValue: DEFAULT_WORKOUTS,
+})
 
 const WorkoutTrackerModel = declareModel({
 	model: WorkoutTrackerSchema,
 	defaultValue: DEFAULT_DATA,
 })
 
-const STORAGE_KEY = 'workout-tracker'
+const WORKOUT_CONFIG_STORAGE_KEY = 'workout-tracker-config'
+const WORKOUT_ENTRIES_STORAGE_KEY = 'workout-tracker-workouts'
+const WORKOUT_LEGACY_STORAGE_KEY = 'workout-tracker'
 
 type WorkoutTrackerHelpers = {
 	getWorkout: (date: string) => WorkoutEntry | null
@@ -97,14 +115,49 @@ type WorkoutTrackerHelpers = {
 	updateConfig: (config: WorkoutTrackerData['config']) => void
 }
 
-type SetWorkoutTrackerData = (
+type SetWorkoutEntries = (
 	value:
-		| WorkoutTrackerData
-		| ((prev: WorkoutTrackerData) => WorkoutTrackerData),
+		| WorkoutTrackerData['workouts']
+		| ((prev: WorkoutTrackerData['workouts']) => WorkoutTrackerData['workouts']),
 ) => void
 
 export function useWorkoutTracker() {
-	const [data, setData] = useLocalData(STORAGE_KEY, WorkoutTrackerModel)
+	const [config, setConfig] = useLocalData(
+		WORKOUT_CONFIG_STORAGE_KEY,
+		WorkoutConfigModel,
+	)
+	const [workouts, setWorkouts] = useLocalData(
+		WORKOUT_ENTRIES_STORAGE_KEY,
+		WorkoutEntriesModel,
+	)
+
+	useEffect(() => {
+		const legacySerialized = window.localStorage.getItem(
+			WORKOUT_LEGACY_STORAGE_KEY,
+		)
+		if (!legacySerialized) return
+		const hasConfig = window.localStorage.getItem(WORKOUT_CONFIG_STORAGE_KEY)
+		const hasWorkouts = window.localStorage.getItem(
+			WORKOUT_ENTRIES_STORAGE_KEY,
+		)
+		if (hasConfig || hasWorkouts) {
+			window.localStorage.removeItem(WORKOUT_LEGACY_STORAGE_KEY)
+			return
+		}
+
+		const legacy = WorkoutTrackerModel.parse(legacySerialized)
+		setConfig(legacy.config)
+		setWorkouts(legacy.workouts)
+		window.localStorage.removeItem(WORKOUT_LEGACY_STORAGE_KEY)
+	}, [setConfig, setWorkouts])
+
+	const data = useMemo<WorkoutTrackerData>(
+		() => ({
+			config,
+			workouts,
+		}),
+		[config, workouts],
+	)
 
 	console.log(data)
 
@@ -116,59 +169,57 @@ export function useWorkoutTracker() {
 			ensureWorkout(date: string) {
 				const existing = data.workouts[date]
 				if (existing) return existing
-				const created = createWorkoutEntry(data, date)
-				setData((prev) => ({
-					...prev,
-					workouts: {
-						...prev.workouts,
-						[date]: created,
-					},
-				}))
-				return created
+				let created: WorkoutEntry | null = null
+				setWorkouts((prev) => {
+					if (prev[date]) {
+						created = prev[date]!
+						return prev
+					}
+					const nextWorkout = createWorkoutEntry(
+						{ config, workouts: prev },
+						date,
+					)
+					created = nextWorkout
+					return {
+						...prev,
+						[date]: nextWorkout,
+					}
+				})
+				return created ?? createWorkoutEntry(data, date)
 			},
 			setWorkout(date: string, workout: WorkoutEntry) {
-				setData((prev) => ({
+				setWorkouts((prev) => ({
 					...prev,
-					workouts: {
-						...prev.workouts,
-						[date]: workout,
-					},
+					[date]: workout,
 				}))
 			},
 			upsertWorkout(
 				date: string,
 				builder: (draft: WorkoutEntry) => WorkoutEntry,
 			) {
-				setData((prev) => {
-					const existing = prev.workouts[date] ?? createWorkoutEntry(prev, date)
+				setWorkouts((prev) => {
+					const existing =
+						prev[date] ??
+						createWorkoutEntry({ config, workouts: prev }, date)
 					const nextWorkout = builder(existing)
 					return {
 						...prev,
-						workouts: {
-							...prev.workouts,
-							[date]: nextWorkout,
-						},
+						[date]: nextWorkout,
 					}
 				})
 			},
 			deleteWorkout(date: string) {
-				setData((prev) => {
-					const { [date]: _removed, ...rest } = prev.workouts
-					return {
-						...prev,
-						workouts: rest,
-					}
+				setWorkouts((prev) => {
+					const { [date]: _removed, ...rest } = prev
+					return rest
 				})
 			},
 			updateConfig(config: WorkoutTrackerData['config']) {
-				setData((prev) => ({
-					...prev,
-					config,
-					workouts: reconcileWorkoutsWithConfig(prev.workouts, config),
-				}))
+				setConfig(config)
+				setWorkouts((prev) => reconcileWorkoutsWithConfig(prev, config))
 			},
 		}),
-		[data, setData],
+		[config, data, setConfig, setWorkouts],
 	)
 
 	return [data, helpers] as const
@@ -245,22 +296,32 @@ export function resolveTemplateForDate(
 export function ensureWorkoutExists(
 	data: WorkoutTrackerData,
 	date: string,
-	setData: SetWorkoutTrackerData,
+	setWorkouts: SetWorkoutEntries,
 ): WorkoutEntry {
 	const existing = data.workouts[date]
 	if (existing) {
 		return existing
 	}
 
-	const created = createWorkoutEntry(data, date)
-	setData((prev) => ({
-		...prev,
-		workouts: {
-			...prev.workouts,
-			[date]: created,
-		},
-	}))
-	return created
+	let created: WorkoutEntry | null = null
+	setWorkouts((prev) => {
+		const current = prev[date]
+		if (current) {
+			created = current
+			return prev
+		}
+
+		const nextWorkout = createWorkoutEntry(
+			{ config: data.config, workouts: prev },
+			date,
+		)
+		created = nextWorkout
+		return {
+			...prev,
+			[date]: nextWorkout,
+		}
+	})
+	return created ?? createWorkoutEntry(data, date)
 }
 
 export function summarizeSets(exercise: WorkoutExerciseEntry) {
@@ -479,4 +540,4 @@ export function reconcileWorkoutsWithConfig(
 	return updatedEntries
 }
 
-export { WorkoutTrackerModel, STORAGE_KEY }
+export { WorkoutConfigModel, WorkoutEntriesModel, WorkoutTrackerModel }
