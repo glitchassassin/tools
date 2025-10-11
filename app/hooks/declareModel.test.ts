@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import z from 'zod'
-import { declareModel } from './useLocalData'
+import { declareModel } from './declareModel'
 
 describe('declareModel', () => {
 	it('returns default value when parsing invalid storage', () => {
@@ -64,12 +64,10 @@ describe('declareModel', () => {
 			const [firstName = '', lastName = ''] = value.fullName.split(' ')
 			return { firstName, lastName }
 		})
-		const buildDisplayName = vi.fn(
-			(value: z.output<typeof firstSchema>) => ({
-				...value,
-				displayName: `${value.firstName} ${value.lastName}`.trim(),
-			}),
-		)
+		const buildDisplayName = vi.fn((value: z.output<typeof firstSchema>) => ({
+			...value,
+			displayName: `${value.firstName} ${value.lastName}`.trim(),
+		}))
 
 		const model = declareModel({
 			model: baseSchema,

@@ -2,13 +2,16 @@ This app is built with React Router 7 on Cloudflare Workers.
 
 ## Feature Development
 
-Follow this to-do list for every feature:
+Follow this to-do list for features that introduce new functionality:
 
 1. Write concise and thorough human-readable test scenarios to
    docs/tests/{feature}.md, and have the user review
 2. Implement the feature
 3. Write e2e tests that follow the defined test scenarios, include Axe
    accessibility checking for any new pages
+
+Changes that fix bugs or refactor code without introducing new functionality do
+NOT need new docs or tests.
 
 ## End-to-End Tests
 
@@ -17,6 +20,10 @@ The app uses Playwright for e2e tests. You can run tests with `npm run test:e2e`
 concise e2e tests that check the feature's acceptance criteria. Prefer to
 combine tests that cover the same path through the app. Write tests that cover
 the feature's "happy path" as well as error scenarios.
+
+End-to-end tests should NEVER use CSS selectors, to avoid coupling things too
+tightly to the DOM/styling. Use label/role based selectors, or if necessary, add
+test IDs.
 
 ## Components
 
