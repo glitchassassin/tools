@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { WorkoutTrackerProvider } from './context.client'
 import { ClientOnly } from 'remix-utils/client-only'
+import { WorkoutTrackerProvider } from './context.client'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Workout Tracker' },

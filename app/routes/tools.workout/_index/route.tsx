@@ -30,11 +30,8 @@ export default function WorkoutHome() {
 	const maxWeights = useMemo(() => getMaxWeightByExercise(data), [data])
 
 	const handleStartWorkout = () => {
-		const workout = helpers.ensureWorkout(todayKey)
-		const template =
-			data.config.templates.find((item) => item.id === workout.templateId) ??
-			data.config.templates[0]
-		navigate(`/tools/workout/workout/${todayKey}`)
+		void helpers.ensureWorkout(todayKey)
+		void navigate(`/tools/workout/workout/${todayKey}`)
 	}
 
 	return (

@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
-import z from 'zod'
-import type { DeclaredModel } from './declareModel'
+import { useCallback, useState } from 'react'
+import type { ZodTypeAny } from 'zod'
+import type { DeclaredModel, SchemaOutput } from './declareModel'
 
-export function useLocalData<Schema extends z.ZodTypeAny>(
+export function useLocalData<Schema extends ZodTypeAny>(
 	key: string,
 	model: DeclaredModel<Schema>,
 ) {
-	const [data, setData] = useState<z.output<Schema>>(() => {
+	const [data, setData] = useState<SchemaOutput<Schema>>(() => {
 		const serialized = window.localStorage.getItem(key)
 		if (!serialized) return model.defaultValue
 		const parsed = model.parse(serialized)
@@ -15,12 +15,14 @@ export function useLocalData<Schema extends z.ZodTypeAny>(
 
 	const setLocalData = useCallback(
 		(
-			value: z.output<Schema> | ((prev: z.output<Schema>) => z.output<Schema>),
+			value:
+				| SchemaOutput<Schema>
+				| ((prev: SchemaOutput<Schema>) => SchemaOutput<Schema>),
 		) => {
 			setData((prev) => {
 				const next =
 					typeof value === 'function'
-						? (value as (current: z.output<Schema>) => z.output<Schema>)(prev)
+						? (value as (current: SchemaOutput<Schema>) => SchemaOutput<Schema>)(prev)
 						: value
 				window.localStorage.setItem(key, model.stringify(next))
 				return next

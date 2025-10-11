@@ -30,14 +30,14 @@ export default function WorkoutDetailRoute() {
 
 	useEffect(() => {
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-			navigate('/tools/workout')
+			void navigate('/tools/workout')
 		}
 	}, [date, navigate])
 
 	useEffect(() => {
 		if (!date) return
 		if (workout) return
-		helpers.ensureWorkout(date)
+		void helpers.ensureWorkout(date)
 	}, [date, helpers, workout])
 
 	const activeTemplate = useMemo(() => {
@@ -50,6 +50,8 @@ export default function WorkoutDetailRoute() {
 	const [activeExerciseId, setActiveExerciseId] = useState<string | null>(
 		() => workout?.exercises[0]?.id ?? null,
 	)
+
+	const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
 
 	useEffect(() => {
 		if (!workout) return
@@ -132,7 +134,6 @@ export default function WorkoutDetailRoute() {
 	}
 
 	const summary = formatWorkoutSummary(workout, activeTemplate, data.config)
-	const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
 
 	const handleCopy = async () => {
 		const header = `${formatDisplayDate(date)} | ${activeTemplate.name}`
@@ -150,7 +151,7 @@ export default function WorkoutDetailRoute() {
 		const confirmed = window.confirm('Are you sure?')
 		if (!confirmed) return
 		helpers.deleteWorkout(date)
-		navigate('/tools/workout')
+		void navigate('/tools/workout')
 	}
 
 	return (

@@ -39,7 +39,7 @@ export default function WorkoutDetailRoute() {
 		if (!date) return
 		if (workout) return
 		void (async () => {
-			const ensuredWorkout = await helpers.ensureWorkout(date)
+			const ensuredWorkout = helpers.ensureWorkout(date)
 			setActiveExerciseId(
 				(current) => current ?? ensuredWorkout.exercises[0]?.id ?? null,
 			)
@@ -155,7 +155,7 @@ export default function WorkoutDetailRoute() {
 	const handleDelete = async () => {
 		const confirmed = window.confirm('Are you sure?')
 		if (!confirmed) return
-		await helpers.deleteWorkout(date)
+		helpers.deleteWorkout(date)
 		await navigate('/tools/workout')
 	}
 
