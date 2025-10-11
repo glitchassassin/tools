@@ -51,6 +51,10 @@ export type WorkoutTemplate = z.infer<typeof WorkoutTemplateSchema>
 export type WorkoutExerciseConfig = z.infer<typeof WorkoutExerciseConfigSchema>
 export type WorkoutEntry = z.infer<typeof WorkoutEntrySchema>
 export type WorkoutExerciseEntry = z.infer<typeof WorkoutExerciseEntrySchema>
+export type WorkoutTrackerSerializedData = {
+	config: string
+	workouts: string
+}
 
 const DEFAULT_CONFIG: WorkoutTrackerData['config'] = {
 	templates: [
@@ -113,6 +117,8 @@ type WorkoutTrackerHelpers = {
 	) => void
 	deleteWorkout: (date: string) => void
 	updateConfig: (config: WorkoutTrackerData['config']) => void
+	exportSerializedData: () => WorkoutTrackerSerializedData
+	importSerializedData: (data: WorkoutTrackerSerializedData) => void
 }
 
 type SetWorkoutEntries = (
@@ -218,8 +224,46 @@ export function useWorkoutTracker() {
 				setConfig(config)
 				setWorkouts((prev) => reconcileWorkoutsWithConfig(prev, config))
 			},
+			exportSerializedData() {
+				const ensureSerializedValue = (
+					key: string,
+					fallback: () => string,
+				) => {
+					const existing = window.localStorage.getItem(key)
+					if (existing != null) {
+						return existing
+					}
+					const computed = fallback()
+					window.localStorage.setItem(key, computed)
+					return computed
+				}
+
+				const configSerialized = ensureSerializedValue(
+					WORKOUT_CONFIG_STORAGE_KEY,
+					() => WorkoutConfigModel.stringify(config),
+				)
+				const workoutsSerialized = ensureSerializedValue(
+					WORKOUT_ENTRIES_STORAGE_KEY,
+					() => WorkoutEntriesModel.stringify(workouts),
+				)
+
+				return {
+					config: configSerialized,
+					workouts: workoutsSerialized,
+				}
+			},
+			importSerializedData(serialized) {
+				const nextConfig = WorkoutConfigModel.parse(serialized.config)
+				const nextWorkouts = WorkoutEntriesModel.parse(serialized.workouts)
+				const reconciled = reconcileWorkoutsWithConfig(
+					nextWorkouts,
+					nextConfig,
+				)
+				setConfig(nextConfig)
+				setWorkouts(reconciled)
+			},
 		}),
-		[config, data, setConfig, setWorkouts],
+		[config, data, setConfig, setWorkouts, workouts],
 	)
 
 	return [data, helpers] as const

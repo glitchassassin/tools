@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, useId } from 'react'
-import type { FormEvent } from 'react'
+import { useEffect, useMemo, useState, useId, useRef } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import type { MetaFunction } from 'react-router'
 import { useWorkoutTrackerContext } from './tools.workout/context.client'
 import type {
 	WorkoutExerciseConfig,
 	WorkoutTrackerData,
+	WorkoutTrackerSerializedData,
 } from './tools.workout/data.client'
 
 export const meta: MetaFunction = () => [{ title: 'Workout Settings' }]
@@ -16,8 +17,13 @@ export default function WorkoutSettingsRoute() {
 	const [draftConfig, setDraftConfig] = useState<DraftConfig>(data.config)
 	const [platesInput, setPlatesInput] = useState(data.config.plates.join(', '))
 	const [status, setStatus] = useState<'idle' | 'saved'>('idle')
+	const [dataMessage, setDataMessage] = useState<{
+		type: 'success' | 'error'
+		text: string
+	} | null>(null)
 	const platesFieldLabelId = useId()
 	const platesFieldDescriptionId = useId()
+	const fileInputRef = useRef<HTMLInputElement | null>(null)
 
 	useEffect(() => {
 		setDraftConfig(data.config)
@@ -83,6 +89,102 @@ export default function WorkoutSettingsRoute() {
 		}))
 	}
 
+	const handleExportData = () => {
+		try {
+			const serialized = helpers.exportSerializedData()
+			const fileContents = JSON.stringify(serialized, null, 2)
+			const blob = new Blob([fileContents], { type: 'application/json' })
+			const url = URL.createObjectURL(blob)
+			const timestamp = new Date().toISOString().split('T')[0] ?? 'export'
+			const anchor = document.createElement('a')
+			anchor.href = url
+			anchor.download = `workout-tracker-data-${timestamp}.json`
+			anchor.click()
+			URL.revokeObjectURL(url)
+			setDataMessage({
+				type: 'success',
+				text: 'Data exported. Download started.',
+			})
+		} catch (error) {
+			console.error(error)
+			setDataMessage({
+				type: 'error',
+				text: 'Unable to export data.',
+			})
+		}
+	}
+
+	const handleImportData = async (event: ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0]
+		if (!file) {
+			return
+		}
+
+		try {
+			const contents = await file.text()
+
+			let parsed: unknown
+			try {
+				parsed = JSON.parse(contents) as unknown
+			} catch {
+				setDataMessage({
+					type: 'error',
+					text: 'Import failed: file does not contain valid JSON.',
+				})
+				return
+			}
+
+			if (!parsed || typeof parsed !== 'object') {
+				setDataMessage({
+					type: 'error',
+					text: 'Import failed: file format is invalid.',
+				})
+				return
+			}
+
+			const candidate = parsed as Partial<WorkoutTrackerSerializedData>
+			if (
+				typeof candidate.config !== 'string' ||
+				typeof candidate.workouts !== 'string'
+			) {
+				setDataMessage({
+					type: 'error',
+					text: 'Import failed: file must include config and workouts strings.',
+				})
+				return
+			}
+
+			try {
+				helpers.importSerializedData({
+					config: candidate.config,
+					workouts: candidate.workouts,
+				})
+				setDataMessage({
+					type: 'success',
+					text: 'Data imported successfully.',
+				})
+			} catch (error) {
+				console.error(error)
+				setDataMessage({
+					type: 'error',
+					text: 'Import failed: file contents are not valid.',
+				})
+			}
+		} catch (error) {
+			console.error(error)
+			setDataMessage({
+				type: 'error',
+				text: 'Import failed: unable to read the selected file.',
+			})
+		} finally {
+			event.target.value = ''
+		}
+	}
+
+	const handleImportButtonClick = () => {
+		fileInputRef.current?.click()
+	}
+
 	const parsedPlates = useMemo(() => {
 		return platesInput
 			.split(',')
@@ -122,6 +224,46 @@ export default function WorkoutSettingsRoute() {
 					denominations.
 				</p>
 			</header>
+
+			<section className="border-app-border bg-app-surface/80 space-y-3 rounded-3xl border p-5">
+				<h3 className="text-lg font-semibold">Import or export data</h3>
+				<p className="text-app-muted text-sm">
+					Download a backup of your workouts or restore data from a previous
+					export.
+				</p>
+				<div className="flex flex-col gap-3 sm:flex-row">
+					<button
+						type="button"
+						onClick={handleExportData}
+						className="bg-app-surface border-app-border text-primary hover:text-primary focus-visible:outline-primary/70 flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 active:scale-[0.99]"
+					>
+						Export data
+					</button>
+					<button
+						type="button"
+						onClick={handleImportButtonClick}
+						className="bg-app-surface border-app-border text-primary hover:text-primary focus-visible:outline-primary/70 flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 active:scale-[0.99]"
+					>
+						Import data
+					</button>
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept="application/json"
+						onChange={handleImportData}
+						className="sr-only"
+						aria-label="Import workout data file"
+					/>
+				</div>
+				{dataMessage && (
+					<p
+						role={dataMessage.type === 'error' ? 'alert' : 'status'}
+						className={`text-sm ${dataMessage.type === 'error' ? 'text-red-500' : 'text-app-muted'}`}
+					>
+						{dataMessage.text}
+					</p>
+				)}
+			</section>
 
 			<form onSubmit={handleSubmit} className="space-y-6">
 				{draftConfig.templates.map((template, templateIndex) => (
