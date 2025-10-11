@@ -348,7 +348,7 @@ test.describe('Workout Tracker – Current Workout Route', () => {
 })
 
 test.describe('Workout Tracker – History Route', () => {
-	test('Chart displays trends for each exercise and bonus reps', async ({
+	test('Chart.js renders history datasets with accessible legend', async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 430, height: 932 })
@@ -357,10 +357,40 @@ test.describe('Workout Tracker – History Route', () => {
 
 		await runAxe(page)
 
-		const svg = page.locator('svg[aria-label="Workout history line chart"]')
-		await expect(svg).toBeVisible()
-		await expect(svg.locator('path').first()).toBeVisible()
-		await expect(svg.locator('circle')).toHaveCount(8)
+		const chart = page.getByRole('img', {
+			name: 'Workout history line chart',
+		})
+		await expect(chart).toBeVisible()
+
+		const weightLegend = page.getByRole('list', { name: 'Weight datasets' })
+		await expect(weightLegend.getByText('Squat', { exact: true })).toBeVisible()
+		await expect(
+			weightLegend.getByText('Bench Press', { exact: true }),
+		).toBeVisible()
+	})
+
+	test('Includes bonus reps dataset in the legend', async ({ page }) => {
+		await page.setViewportSize({ width: 430, height: 932 })
+		await recordHistoryWorkouts(page)
+		await page.goto('/tools/workout/history')
+
+		const bonusLegend = page.getByRole('list', { name: 'Bonus datasets' })
+		await expect(
+			bonusLegend.getByText('Pull-ups', { exact: true }),
+		).toBeVisible()
+		await expect(
+			page.getByText('Weight uses the left axis; bonus reps use the right axis.'),
+		).toBeVisible()
+	})
+
+	test('Empty history shows helper text', async ({ page }) => {
+		await page.setViewportSize({ width: 430, height: 932 })
+		await page.goto('/tools/workout/history')
+
+		await expect(
+			page.getByRole('img', { name: 'Workout history line chart' }),
+		).toHaveCount(0)
+		await expect(page.getByText('No historical data yet.')).toBeVisible()
 	})
 
 	test('Workout log navigation', async ({ page }) => {

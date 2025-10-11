@@ -1,4 +1,17 @@
+import {
+	Chart as ChartJS,
+	CategoryScale,
+	Legend,
+	LineElement,
+	PointElement,
+	TimeScale,
+	LinearScale,
+	Tooltip,
+} from 'chart.js'
+import type { ChartData, ChartOptions, TooltipItem } from 'chart.js'
+import 'chartjs-adapter-date-fns'
 import { useMemo } from 'react'
+import { Line } from 'react-chartjs-2'
 import { Link } from 'react-router'
 import type { MetaFunction } from 'react-router'
 import { useWorkoutTrackerContext } from './tools.workout/context.client'
@@ -8,6 +21,16 @@ import {
 	toDateKey,
 	summarizeSets,
 } from './tools.workout/data.client'
+
+ChartJS.register(
+	CategoryScale,
+	LinearScale,
+	PointElement,
+	LineElement,
+	TimeScale,
+	Tooltip,
+	Legend,
+)
 
 export const meta: MetaFunction = () => [{ title: 'Workout History' }]
 
@@ -110,65 +133,114 @@ export default function WorkoutHistoryRoute() {
 		return exerciseDatasets
 	}, [exerciseNames, workouts, data.config.bonusLabel])
 
-	const chart = useMemo(() => {
-		const allPoints = datasets.flatMap((dataset) => dataset.points)
-		if (allPoints.length === 0) {
-			return null
-		}
-		const minX = Math.min(...allPoints.map((point) => point.x))
-		const maxX = Math.max(...allPoints.map((point) => point.x))
-		const maxY = Math.max(...allPoints.map((point) => point.y), 0)
+	const activeDatasets = useMemo(
+		() => datasets.filter((dataset) => dataset.points.length > 0),
+		[datasets],
+	)
 
-		const width = 640
-		const height = 320
-		const paddingX = 48
-		const paddingY = 32
-		const xRange = maxX - minX || 1
-		const yRange = maxY || 1
+	const chartData = useMemo<ChartData<'line'> | null>(() => {
+		const entries = activeDatasets.map((dataset) => ({
+			label: dataset.label,
+			borderColor: dataset.color,
+			backgroundColor: dataset.color,
+			data: [...dataset.points]
+				.sort((a, b) => a.x - b.x)
+				.map((point) => ({ x: point.x, y: point.y, label: point.label })),
+			tension: 0.3,
+			pointRadius: 4,
+			pointHoverRadius: 6,
+			pointBorderWidth: 2,
+			pointHoverBorderWidth: 2,
+			borderWidth: 2,
+			hitRadius: 12,
+			pointBackgroundColor: dataset.color,
+			yAxisID: dataset.id === 'bonus' ? 'bonus' : 'weight',
+		}))
+		if (entries.length === 0) return null
+		return { datasets: entries }
+	}, [activeDatasets])
 
-		const scaleX = (value: number) =>
-			paddingX + ((value - minX) / xRange) * (width - paddingX * 2)
-		const scaleY = (value: number) =>
-			height - paddingY - (value / yRange) * (height - paddingY * 2)
+	const weightLegendDatasets = useMemo(
+		() => activeDatasets.filter((dataset) => dataset.id !== 'bonus'),
+		[activeDatasets],
+	)
+	const bonusLegendDataset = useMemo(
+		() => activeDatasets.find((dataset) => dataset.id === 'bonus') ?? null,
+		[activeDatasets],
+	)
 
-		const xTicks = Array.from(
-			new Set(
-				datasets.flatMap((dataset) => dataset.points.map((point) => point.x)),
-			),
-		).sort((a, b) => a - b)
-
-		return {
-			width,
-			height,
-			paddingX,
-			paddingY,
-			scaleX,
-			scaleY,
-			xTicks,
-			maxY,
-		}
-	}, [datasets])
-
-	const renderPath = (dataset: Dataset) => {
-		if (!chart || dataset.points.length === 0) return null
-		const sortedPoints = [...dataset.points].sort((a, b) => a.x - b.x)
-		const points = sortedPoints
-			.map((point, index) => {
-				const x = chart.scaleX(point.x)
-				const y = chart.scaleY(point.y)
-				return `${index === 0 ? 'M' : 'L'}${x} ${y}`
-			})
-			.join(' ')
-		return (
-			<path
-				key={dataset.id}
-				d={points}
-				fill="none"
-				stroke={dataset.color}
-				strokeWidth={3}
-			/>
-		)
-	}
+	const chartOptions = useMemo<ChartOptions<'line'>>(
+		() => ({
+			responsive: true,
+			maintainAspectRatio: false,
+			interaction: { mode: 'nearest', intersect: false },
+			plugins: {
+				legend: { display: false },
+				tooltip: {
+					displayColors: false,
+					backgroundColor: 'rgba(17, 24, 39, 0.9)',
+					titleColor: '#f9fafb',
+					bodyColor: '#f9fafb',
+					callbacks: {
+						label: (context: TooltipItem<'line'>) => {
+							const raw = context.raw as ChartPoint | undefined
+							if (raw?.label) return raw.label
+							const parsedX = context.parsed.x
+							const dateLabel = Number.isFinite(parsedX)
+								? formatDisplayDate(toDateKey(new Date(parsedX)))
+								: context.label ?? ''
+							return `${dateLabel} • ${context.formattedValue}`
+						},
+					},
+				},
+			},
+			scales: {
+				x: {
+					type: 'time',
+					time: { tooltipFormat: 'PP' },
+					grid: { color: 'rgba(255,255,255,0.07)' },
+					ticks: {
+						color: 'rgba(255,255,255,0.6)',
+						maxRotation: 0,
+					},
+				},
+				weight: {
+					beginAtZero: true,
+					grid: { color: 'rgba(255,255,255,0.07)' },
+					ticks: { color: 'rgba(255,255,255,0.6)' },
+					title: {
+						display: true,
+						text: 'Weight (lb)',
+						color: 'rgba(255,255,255,0.6)',
+						padding: { bottom: 8 },
+					},
+					position: 'left',
+				},
+				bonus: {
+					beginAtZero: true,
+					grid: {
+						color: 'rgba(255,255,255,0.07)',
+						drawOnChartArea: false,
+					},
+					ticks: {
+						color: 'rgba(255,255,255,0.6)',
+						stepSize: 1,
+						precision: 0,
+						callback: (value) =>
+							typeof value === 'number' ? `${Math.round(value)}` : value,
+					},
+					title: {
+						display: true,
+						text: 'Bonus reps',
+						color: 'rgba(255,255,255,0.6)',
+						padding: { bottom: 8 },
+					},
+					position: 'right',
+				},
+			},
+		}),
+		[],
+	)
 
 	return (
 		<section className="space-y-10">
@@ -180,100 +252,57 @@ export default function WorkoutHistoryRoute() {
 			</header>
 
 			<div className="border-app-border bg-app-surface/80 rounded-3xl border p-4">
-				{chart ? (
+				{chartData ? (
 					<div className="flex flex-col gap-4">
-						<svg
-							viewBox={`0 0 ${chart.width} ${chart.height}`}
-							role="img"
-							aria-label="Workout history line chart"
-							className="h-72 w-full"
-						>
-							<g stroke="rgba(255,255,255,0.1)">
-								<line
-									x1={chart.paddingX}
-									y1={chart.height - chart.paddingY}
-									x2={chart.width - chart.paddingX / 2}
-									y2={chart.height - chart.paddingY}
-								/>
-								<line
-									x1={chart.paddingX}
-									y1={chart.paddingY / 2}
-									x2={chart.paddingX}
-									y2={chart.height - chart.paddingY}
-								/>
-							</g>
-							{chart.xTicks.map((tick) => {
-								const x = chart.scaleX(tick)
-								const tickKey = toDateKey(new Date(tick))
-								return (
-									<g key={tick}>
-										<line
-											x1={x}
-											x2={x}
-											y1={chart.paddingY}
-											y2={chart.height - chart.paddingY}
-											stroke="rgba(255,255,255,0.07)"
-										/>
-										<text
-											x={x}
-											y={chart.height - chart.paddingY / 2}
-											fill="rgba(255,255,255,0.6)"
-											fontSize={12}
-											textAnchor="middle"
-										>
-											{formatDisplayDate(tickKey)}
-										</text>
-									</g>
-								)
-							})}
-							{datasets.map(
-								(dataset) =>
-									dataset.points.length > 0 && (
-										<g key={dataset.id}>
-											{renderPath(dataset)}
-											{dataset.points.map((point, index) => (
-												<circle
-													key={`${dataset.id}-${index}`}
-													cx={chart.scaleX(point.x)}
-													cy={chart.scaleY(point.y)}
-													r={5}
-													fill={dataset.color}
-												>
-													<title>{point.label}</title>
-												</circle>
-											))}
-										</g>
-									),
-							)}
-							<text
-								x={chart.paddingX / 2}
-								y={chart.paddingY}
-								fill="rgba(255,255,255,0.6)"
-								fontSize={12}
-								textAnchor="middle"
-								transform={`rotate(-90 ${chart.paddingX / 2} ${chart.paddingY})`}
-							>
-								Lbs / Bonus reps
-							</text>
-						</svg>
+						<div className="h-72 w-full">
+							<Line
+								data={chartData}
+								options={chartOptions}
+								aria-label="Workout history line chart"
+								role="img"
+							/>
+						</div>
 
 						<div className="flex flex-wrap gap-4">
-							{datasets
-								.filter((dataset) => dataset.points.length > 0)
-								.map((dataset) => (
-									<div
-										key={dataset.id}
-										className="text-app-muted flex items-center gap-2 text-sm"
+							<div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+								<ul
+									aria-label="Weight datasets"
+									className="flex flex-wrap gap-4"
+								>
+									{weightLegendDatasets.map((dataset) => (
+										<li
+											key={dataset.id}
+											className="text-app-muted flex items-center gap-2 text-sm"
+										>
+											<span
+												className="inline-block h-2.5 w-6 rounded-full"
+												style={{ backgroundColor: dataset.color }}
+												aria-hidden
+											/>
+											{dataset.label}
+										</li>
+									))}
+								</ul>
+								{bonusLegendDataset ? (
+									<ul
+										aria-label="Bonus datasets"
+										className="flex items-center gap-4"
 									>
-										<span
-											className="inline-block h-2.5 w-6 rounded-full"
-											style={{ backgroundColor: dataset.color }}
-											aria-hidden
-										/>
-										{dataset.label}
-									</div>
-								))}
+										<li className="text-app-muted flex items-center gap-2 text-sm">
+											<span
+												className="inline-block h-2.5 w-6 rounded-full"
+												style={{ backgroundColor: bonusLegendDataset.color }}
+												aria-hidden
+											/>
+											{bonusLegendDataset.label}
+										</li>
+									</ul>
+								) : null}
+							</div>
 						</div>
+						<p className="text-app-muted text-xs">
+							Weight uses the left axis; bonus reps use the right axis.
+						</p>
 					</div>
 				) : (
 					<p className="text-app-muted text-sm">No historical data yet.</p>
