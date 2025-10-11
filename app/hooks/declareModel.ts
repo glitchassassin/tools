@@ -1,51 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import z from 'zod'
 
-const PersonModel = declareModel({
-	model: z.object({
-		personName: z.string(),
-	}),
-	defaultValue: {
-		personName: '',
-	},
-}).migrate({
-	model: z.object({
-		firstName: z.string(),
-		lastName: z.string(),
-	}),
-	migration(data) {
-		const [firstName, lastName] = data.personName.split(' ')
-		return {
-			firstName,
-			lastName,
-		}
-	},
-	defaultValue: {
-		firstName: '',
-		lastName: '',
-	},
-})
-
-export function useLocalData<DataType>(
-	key: string,
-	model: DeclaredModel<z.ZodType<DataType>>,
-) {
-	const [data, setData] = useState(model.defaultValue)
-
-	useEffect(() => {
-		const serialized = window.localStorage.getItem(key)
-		if (!serialized) return
-		const obj = model.parse(serialized)
-	}, [])
-
-	const setLocalData = useCallback((value: DataType) => {
-		setData(value)
-		window.localStorage.setItem(key, model.stringify(value))
-	}, [])
-
-	return [data, setLocalData]
-}
-
 type BaseModelConfig<Schema extends z.ZodTypeAny> = {
 	model: Schema
 	defaultValue: z.output<Schema>
@@ -60,7 +15,7 @@ type MigrationConfig<
 	migration: (value: z.output<PrevSchema>) => z.output<NextSchema>
 }
 
-type DeclaredModel<Schema extends z.ZodTypeAny> = {
+export type DeclaredModel<Schema extends z.ZodTypeAny> = {
 	parse(serialized: string): z.output<Schema>
 	stringify(value: z.output<Schema>): string
 	defaultValue: z.output<Schema>

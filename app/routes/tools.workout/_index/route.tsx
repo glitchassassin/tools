@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from './tools.workout/context.client'
+import { useWorkoutTrackerContext } from '../context.client'
 import {
 	formatDisplayDate,
 	getMaxWeightByExercise,
 	getTodayKey,
-} from './tools.workout/data.client'
+} from '../data.client'
 
 export const meta: MetaFunction = () => [{ title: 'Workout Tracker' }]
 
@@ -29,9 +29,12 @@ export default function WorkoutHome() {
 
 	const maxWeights = useMemo(() => getMaxWeightByExercise(data), [data])
 
-	const handleStartWorkout = async () => {
-		const ensuredWorkout = await helpers.ensureWorkout(todayKey)
-		await navigate(`/tools/workout/workout/${ensuredWorkout.date}`)
+	const handleStartWorkout = () => {
+		const workout = helpers.ensureWorkout(todayKey)
+		const template =
+			data.config.templates.find((item) => item.id === workout.templateId) ??
+			data.config.templates[0]
+		navigate(`/tools/workout/workout/${todayKey}`)
 	}
 
 	return (

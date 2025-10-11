@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from './tools.workout/context.client'
+import { useWorkoutTrackerContext } from '../context.client'
 import {
 	alignWorkoutWithTemplate,
 	calculatePlateBreakdown,
 	formatDisplayDate,
 	formatWorkoutSummary,
 	getTodayKey,
-} from './tools.workout/data.client'
-import { RepsSpinner } from '~/components/reps-spinner'
+} from '../data.client'
 
 export const meta: MetaFunction = ({ params }) => {
 	const date = (params?.date as string | undefined) ?? getTodayKey()
@@ -31,19 +30,14 @@ export default function WorkoutDetailRoute() {
 
 	useEffect(() => {
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-			void navigate('/tools/workout')
+			navigate('/tools/workout')
 		}
 	}, [date, navigate])
 
 	useEffect(() => {
 		if (!date) return
 		if (workout) return
-		void (async () => {
-			const ensuredWorkout = await helpers.ensureWorkout(date)
-			setActiveExerciseId(
-				(current) => current ?? ensuredWorkout.exercises[0]?.id ?? null,
-			)
-		})()
+		helpers.ensureWorkout(date)
 	}, [date, helpers, workout])
 
 	const activeTemplate = useMemo(() => {
@@ -56,7 +50,6 @@ export default function WorkoutDetailRoute() {
 	const [activeExerciseId, setActiveExerciseId] = useState<string | null>(
 		() => workout?.exercises[0]?.id ?? null,
 	)
-	const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
 
 	useEffect(() => {
 		if (!workout) return
@@ -139,6 +132,7 @@ export default function WorkoutDetailRoute() {
 	}
 
 	const summary = formatWorkoutSummary(workout, activeTemplate, data.config)
+	const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
 
 	const handleCopy = async () => {
 		const header = `${formatDisplayDate(date)} | ${activeTemplate.name}`
@@ -152,18 +146,26 @@ export default function WorkoutDetailRoute() {
 		}
 	}
 
-	const handleDelete = async () => {
+	const handleDelete = () => {
 		const confirmed = window.confirm('Are you sure?')
 		if (!confirmed) return
-		await helpers.deleteWorkout(date)
-		await navigate('/tools/workout')
+		helpers.deleteWorkout(date)
+		navigate('/tools/workout')
 	}
 
 	return (
 		<section className="space-y-8">
-			<header className="space-y-1">
-				<p className="text-app-muted text-sm">{activeTemplate.name}</p>
-				<h2 className="text-2xl font-semibold">{formatDisplayDate(date)}</h2>
+			<header className="space-y-2">
+				<Link
+					to="/tools/workout"
+					className="text-app-muted hover:text-primary text-sm underline-offset-4 hover:underline"
+				>
+					← Back to index
+				</Link>
+				<div>
+					<p className="text-app-muted text-sm">{activeTemplate.name}</p>
+					<h2 className="text-2xl font-semibold">{formatDisplayDate(date)}</h2>
+				</div>
 			</header>
 
 			<div className="space-y-4">
@@ -259,17 +261,47 @@ export default function WorkoutDetailRoute() {
 										<p className="text-app-muted text-xs tracking-[0.3em] uppercase">
 											Reps per set
 										</p>
-										<div className="mt-4 grid grid-cols-5 gap-4">
+										<div className="mt-4 grid grid-cols-3 gap-4 sm:grid-cols-5">
 											{exercise.sets.map((set, index) => (
-												<RepsSpinner
+												<div
 													key={index}
-													value={set.reps}
-													min={0}
-													label={`reps for set ${index + 1}`}
-													onChange={(nextValue) =>
-														handleRepChange(exercise.id, index, nextValue)
-													}
-												/>
+													className="border-app-border bg-app-surface/70 flex flex-col items-center rounded-2xl border px-3 py-3"
+												>
+													<button
+														type="button"
+														className="border-primary text-primary hover:bg-primary/10 focus-visible:outline-primary h-10 w-10 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+														onClick={() =>
+															handleRepChange(exercise.id, index, set.reps + 1)
+														}
+														aria-label={`Increase reps for set ${index + 1}`}
+													>
+														+
+													</button>
+													<input
+														type="number"
+														min={0}
+														value={set.reps}
+														onChange={(event) =>
+															handleRepChange(
+																exercise.id,
+																index,
+																Number.parseInt(event.target.value, 10) || 0,
+															)
+														}
+														className="border-app-border bg-app-surface focus:border-primary my-2 w-14 rounded-lg border text-center text-lg font-semibold focus:outline-none"
+													/>
+													<button
+														type="button"
+														className="border-primary text-primary hover:bg-primary/10 focus-visible:outline-primary disabled:border-app-border disabled:text-app-muted h-10 w-10 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+														onClick={() =>
+															handleRepChange(exercise.id, index, set.reps - 1)
+														}
+														aria-label={`Decrease reps for set ${index + 1}`}
+														disabled={set.reps <= 0}
+													>
+														−
+													</button>
+												</div>
 											))}
 										</div>
 									</div>

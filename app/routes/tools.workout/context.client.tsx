@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { ReactNode } from 'react'
-import type { WorkoutTrackerData } from './data'
-import { useWorkoutTracker } from './data'
+import type { WorkoutTrackerData } from './data.client'
+import { useWorkoutTracker } from './data.client'
 
 type WorkoutTrackerHelpers = ReturnType<typeof useWorkoutTracker>[1]
 
@@ -10,7 +10,9 @@ type WorkoutTrackerContextValue = {
 	helpers: WorkoutTrackerHelpers
 }
 
-const WorkoutTrackerContext = createContext<WorkoutTrackerContextValue | null>(null)
+const WorkoutTrackerContext = createContext<WorkoutTrackerContextValue | null>(
+	null,
+)
 
 export function WorkoutTrackerProvider({ children }: { children: ReactNode }) {
 	const [data, helpers] = useWorkoutTracker()

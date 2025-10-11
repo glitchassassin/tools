@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
+import { format as formatDate, isValid, parse } from 'date-fns'
 import z from 'zod'
-import { createLocalModel, useLocalData } from '~/hooks/useLocalData'
+import { declareModel } from '~/hooks/declareModel'
+import { useLocalData } from '~/hooks/useLocalData.client'
 
 const WorkoutExerciseConfigSchema = z.object({
 	id: z.string(),
@@ -76,7 +78,7 @@ const DEFAULT_DATA: WorkoutTrackerData = {
 	workouts: {},
 }
 
-const WorkoutTrackerModel = createLocalModel({
+const WorkoutTrackerModel = declareModel({
 	model: WorkoutTrackerSchema,
 	defaultValue: DEFAULT_DATA,
 })
@@ -91,18 +93,20 @@ type WorkoutTrackerHelpers = {
 		date: string,
 		builder: (draft: WorkoutEntry) => WorkoutEntry,
 	) => void
-	deleteWorkout: (date: string) => boolean
+	deleteWorkout: (date: string) => void
 	updateConfig: (config: WorkoutTrackerData['config']) => void
-	hydrated: boolean
 }
 
-type WorkoutSchema = typeof WorkoutTrackerSchema
+type SetWorkoutTrackerData = (
+	value:
+		| WorkoutTrackerData
+		| ((prev: WorkoutTrackerData) => WorkoutTrackerData),
+) => void
 
 export function useWorkoutTracker() {
-	const [data, setData, hydrated] = useLocalData<WorkoutSchema>(
-		STORAGE_KEY,
-		WorkoutTrackerModel,
-	)
+	const [data, setData] = useLocalData(STORAGE_KEY, WorkoutTrackerModel)
+
+	console.log(data)
 
 	const helpers = useMemo<WorkoutTrackerHelpers>(
 		() => ({
@@ -148,20 +152,13 @@ export function useWorkoutTracker() {
 				})
 			},
 			deleteWorkout(date: string) {
-				let removed = false
 				setData((prev) => {
-					if (!(date in prev.workouts)) {
-						return prev
-					}
-
-					removed = true
 					const { [date]: _removed, ...rest } = prev.workouts
 					return {
 						...prev,
 						workouts: rest,
 					}
 				})
-				return removed
 			},
 			updateConfig(config: WorkoutTrackerData['config']) {
 				setData((prev) => ({
@@ -170,9 +167,8 @@ export function useWorkoutTracker() {
 					workouts: reconcileWorkoutsWithConfig(prev.workouts, config),
 				}))
 			},
-			hydrated,
 		}),
-		[data, setData, hydrated],
+		[data, setData],
 	)
 
 	return [data, helpers] as const
@@ -249,7 +245,7 @@ export function resolveTemplateForDate(
 export function ensureWorkoutExists(
 	data: WorkoutTrackerData,
 	date: string,
-	setData: (updater: (prev: WorkoutTrackerData) => WorkoutTrackerData) => void,
+	setData: SetWorkoutTrackerData,
 ): WorkoutEntry {
 	const existing = data.workouts[date]
 	if (existing) {
@@ -355,38 +351,24 @@ export function getMaxWeightByExercise(data: WorkoutTrackerData) {
 	return result
 }
 
-export function parseDateKey(date: string) {
-	const [yearStr, monthStr, dayStr] = date.split('-')
-	const year = Number.parseInt(yearStr ?? '', 10)
-	const month = Number.parseInt(monthStr ?? '', 10)
-	const day = Number.parseInt(dayStr ?? '', 10)
-	if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-		return new Date(date)
-	}
-	return new Date(Date.UTC(year, month - 1, day))
-}
-
 export function formatDisplayDate(date: string) {
-	const [yearStr, monthStr, dayStr] = date.split('-')
-	const year = Number.parseInt(yearStr ?? '', 10)
-	const month = Number.parseInt(monthStr ?? '', 10)
-	const day = Number.parseInt(dayStr ?? '', 10)
-	if (
-		!Number.isFinite(year) ||
-		!Number.isFinite(month) ||
-		!Number.isFinite(day)
-	) {
+	const parsed = parse(date, 'yyyy-MM-dd', new Date())
+	if (!isValid(parsed) || formatDate(parsed, 'yyyy-MM-dd') !== date) {
 		return date
 	}
-
-	return `${month}/${day}/${year}`
+	return formatDate(parsed, 'M/d/yyyy')
 }
 
 export function toDateKey(date: Date) {
-	const year = date.getUTCFullYear()
-	const month = `${date.getUTCMonth() + 1}`.padStart(2, '0')
-	const day = `${date.getUTCDate()}`.padStart(2, '0')
-	return `${year}-${month}-${day}`
+	return formatDate(date, 'yyyy-MM-dd')
+}
+
+export function parseDateKey(value: string) {
+	const parsed = parse(value, 'yyyy-MM-dd', new Date())
+	if (!isValid(parsed) || formatDate(parsed, 'yyyy-MM-dd') !== value) {
+		return new Date(NaN)
+	}
+	return parsed
 }
 
 export function getTodayKey() {

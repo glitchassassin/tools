@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { WorkoutTrackerProvider } from './context'
+import { WorkoutTrackerProvider } from './context.client'
+import { ClientOnly } from 'remix-utils/client-only'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Workout Tracker' },
@@ -18,39 +19,43 @@ const NAV_ITEMS = [
 
 export default function WorkoutLayout() {
 	return (
-		<WorkoutTrackerProvider>
-			<main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
-				<header className="space-y-2">
-					<p className="text-app-muted text-sm tracking-[0.3em] uppercase">
-						Tools
-					</p>
-					<h1 className="text-3xl font-semibold">Workout Tracker</h1>
-				</header>
+		<main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
+			<header className="space-y-2">
+				<p className="text-app-muted text-sm tracking-[0.3em] uppercase">
+					Tools
+				</p>
+				<h1 className="text-3xl font-semibold">Workout Tracker</h1>
+			</header>
 
-				<nav aria-label="Workout navigation" className="flex gap-2">
-					{NAV_ITEMS.map((item) => (
-						<NavLink
-							key={item.to}
-							to={item.to}
-							className={({ isActive }) =>
-								[
-									'flex-1 rounded-full border px-3 py-2 text-center text-sm font-medium transition',
-									isActive
-										? 'border-primary bg-primary text-primary-foreground'
-										: 'border-app-border bg-app-surface text-app-foreground hover:border-primary/40 hover:text-primary',
-								].join(' ')
-							}
-							end
-						>
-							{item.label}
-						</NavLink>
-					))}
-				</nav>
+			<nav aria-label="Workout navigation" className="flex gap-2">
+				{NAV_ITEMS.map((item) => (
+					<NavLink
+						key={item.to}
+						to={item.to}
+						className={({ isActive }) =>
+							[
+								'flex-1 rounded-full border px-3 py-2 text-center text-sm font-medium transition',
+								isActive
+									? 'border-primary bg-primary text-primary-foreground'
+									: 'border-app-border bg-app-surface text-app-foreground hover:border-primary/40 hover:text-primary',
+							].join(' ')
+						}
+						end
+					>
+						{item.label}
+					</NavLink>
+				))}
+			</nav>
 
-				<section className="flex-1">
-					<Outlet />
-				</section>
-			</main>
-		</WorkoutTrackerProvider>
+			<section className="flex-1">
+				<ClientOnly>
+					{() => (
+						<WorkoutTrackerProvider>
+							<Outlet />
+						</WorkoutTrackerProvider>
+					)}
+				</ClientOnly>
+			</section>
+		</main>
 	)
 }

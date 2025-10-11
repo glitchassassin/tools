@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState, useId } from 'react'
 import type { FormEvent } from 'react'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from './tools.workout/context'
+import { useWorkoutTrackerContext } from './tools.workout/context.client'
 import type {
 	WorkoutExerciseConfig,
 	WorkoutTrackerData,
-} from './tools.workout/data'
+} from './tools.workout/data.client'
 
-export const meta: MetaFunction = () => [
-	{ title: 'Workout Settings' },
-]
+export const meta: MetaFunction = () => [{ title: 'Workout Settings' }]
 
 type DraftConfig = WorkoutTrackerData['config']
 
@@ -119,8 +117,9 @@ export default function WorkoutSettingsRoute() {
 		<section className="space-y-8">
 			<header className="space-y-2">
 				<h2 className="text-2xl font-semibold">Workout templates</h2>
-				<p className="text-sm text-app-muted">
-					Update exercise names, set counts, bonus reps label, and plate denominations.
+				<p className="text-app-muted text-sm">
+					Update exercise names, set counts, bonus reps label, and plate
+					denominations.
 				</p>
 			</header>
 
@@ -128,7 +127,7 @@ export default function WorkoutSettingsRoute() {
 				{draftConfig.templates.map((template, templateIndex) => (
 					<fieldset
 						key={template.id}
-						className="space-y-4 rounded-3xl border border-app-border bg-app-surface/80 p-5"
+						className="border-app-border bg-app-surface/80 space-y-4 rounded-3xl border p-5"
 					>
 						<legend className="px-2 text-lg font-semibold">
 							<input
@@ -137,7 +136,7 @@ export default function WorkoutSettingsRoute() {
 								onChange={(event) =>
 									handleTemplateNameChange(templateIndex, event.target.value)
 								}
-								className="w-full rounded-xl border border-app-border bg-app-surface px-3 py-2 text-base font-semibold focus:border-primary focus:outline-none"
+								className="border-app-border bg-app-surface focus:border-primary w-full rounded-xl border px-3 py-2 text-base font-semibold focus:outline-none"
 								aria-label={`Name for template ${templateIndex + 1}`}
 							/>
 						</legend>
@@ -147,7 +146,7 @@ export default function WorkoutSettingsRoute() {
 									key={exercise.id}
 									className="grid grid-cols-[1fr_auto] gap-3 sm:grid-cols-[2fr_auto]"
 								>
-									<label className="flex flex-col text-sm text-app-muted">
+									<label className="text-app-muted flex flex-col text-sm">
 										<span>Exercise name</span>
 										<input
 											type="text"
@@ -160,10 +159,10 @@ export default function WorkoutSettingsRoute() {
 													event.target.value,
 												)
 											}
-											className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2 text-base focus:border-primary focus:outline-none"
+											className="border-app-border bg-app-surface focus:border-primary mt-1 w-full rounded-xl border px-3 py-2 text-base focus:outline-none"
 										/>
 									</label>
-									<label className="flex flex-col text-sm text-app-muted">
+									<label className="text-app-muted flex flex-col text-sm">
 										<span>Sets</span>
 										<input
 											type="number"
@@ -177,7 +176,7 @@ export default function WorkoutSettingsRoute() {
 													event.target.value,
 												)
 											}
-											className="mt-1 w-24 rounded-xl border border-app-border bg-app-surface px-3 py-2 text-base focus:border-primary focus:outline-none"
+											className="border-app-border bg-app-surface focus:border-primary mt-1 w-24 rounded-xl border px-3 py-2 text-base focus:outline-none"
 										/>
 									</label>
 								</div>
@@ -186,27 +185,24 @@ export default function WorkoutSettingsRoute() {
 					</fieldset>
 				))}
 
-				<section className="rounded-3xl border border-app-border bg-app-surface/80 p-5">
+				<section className="border-app-border bg-app-surface/80 rounded-3xl border p-5">
 					<h3 className="text-lg font-semibold">Bonus reps</h3>
-					<label className="mt-3 block text-sm text-app-muted">
+					<label className="text-app-muted mt-3 block text-sm">
 						Description (leave blank to hide)
 						<input
 							type="text"
 							value={draftConfig.bonusLabel}
 							onChange={(event) => handleBonusLabelChange(event.target.value)}
-							className="mt-2 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2 text-base focus:border-primary focus:outline-none"
+							className="border-app-border bg-app-surface focus:border-primary mt-2 w-full rounded-xl border px-3 py-2 text-base focus:outline-none"
 						/>
 					</label>
 				</section>
 
-				<section className="rounded-3xl border border-app-border bg-app-surface/80 p-5">
+				<section className="border-app-border bg-app-surface/80 rounded-3xl border p-5">
 					<h3 id={platesFieldLabelId} className="text-lg font-semibold">
 						Plate denominations
 					</h3>
-					<p
-						id={platesFieldDescriptionId}
-						className="text-sm text-app-muted"
-					>
+					<p id={platesFieldDescriptionId} className="text-app-muted text-sm">
 						Enter a comma-separated list of per-side plate weights in pounds.
 					</p>
 					<input
@@ -215,9 +211,9 @@ export default function WorkoutSettingsRoute() {
 						onChange={(event) => setPlatesInput(event.target.value)}
 						aria-labelledby={platesFieldLabelId}
 						aria-describedby={platesFieldDescriptionId}
-						className="mt-3 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2 text-base focus:border-primary focus:outline-none"
+						className="border-app-border bg-app-surface focus:border-primary mt-3 w-full rounded-xl border px-3 py-2 text-base focus:outline-none"
 					/>
-					<div className="mt-2 text-sm text-app-muted">
+					<div className="text-app-muted mt-2 text-sm">
 						Parsed plates:{' '}
 						{parsedPlates.length > 0 ? parsedPlates.join(', ') : '—'}
 					</div>
@@ -226,12 +222,12 @@ export default function WorkoutSettingsRoute() {
 				<div className="space-y-2">
 					<button
 						type="submit"
-						className="w-full rounded-full bg-primary px-4 py-3 text-base font-semibold text-primary-foreground transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/70 active:scale-[0.99]"
+						className="bg-primary text-primary-foreground focus-visible:outline-primary/70 w-full rounded-full px-4 py-3 text-base font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 active:scale-[0.99]"
 					>
 						Save settings
 					</button>
 					{status === 'saved' && (
-						<p role="status" className="text-center text-sm text-app-muted">
+						<p role="status" className="text-app-muted text-center text-sm">
 							Settings saved. Existing workouts updated to match.
 						</p>
 					)}

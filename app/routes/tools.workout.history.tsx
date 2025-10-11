@@ -1,17 +1,15 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from './tools.workout/context'
+import { useWorkoutTrackerContext } from './tools.workout/context.client'
 import {
 	formatDisplayDate,
 	parseDateKey,
 	toDateKey,
 	summarizeSets,
-} from './tools.workout/data'
+} from './tools.workout/data.client'
 
-export const meta: MetaFunction = () => [
-	{ title: 'Workout History' },
-]
+export const meta: MetaFunction = () => [{ title: 'Workout History' }]
 
 type ChartPoint = { x: number; y: number; label: string }
 type Dataset = {
@@ -21,7 +19,14 @@ type Dataset = {
 	points: ChartPoint[]
 }
 
-const palette = ['#ffb900', '#80cbc4', '#64b5f6', '#ce93d8', '#f48fb1', '#ffd54f']
+const palette = [
+	'#ffb900',
+	'#80cbc4',
+	'#64b5f6',
+	'#ce93d8',
+	'#f48fb1',
+	'#ffd54f',
+]
 
 export default function WorkoutHistoryRoute() {
 	const { data } = useWorkoutTrackerContext()
@@ -48,7 +53,9 @@ export default function WorkoutHistoryRoute() {
 
 	const templateNames = useMemo(
 		() =>
-			new Map(data.config.templates.map((template) => [template.id, template.name])),
+			new Map(
+				data.config.templates.map((template) => [template.id, template.name]),
+			),
 		[data.config.templates],
 	)
 
@@ -63,7 +70,9 @@ export default function WorkoutHistoryRoute() {
 			}),
 		)
 
-		const datasetMap = new Map(exerciseDatasets.map((dataset) => [dataset.id, dataset]))
+		const datasetMap = new Map(
+			exerciseDatasets.map((dataset) => [dataset.id, dataset]),
+		)
 
 		workouts.forEach((workout) => {
 			const workoutTimestamp = parseDateKey(workout.date).getTime()
@@ -165,12 +174,12 @@ export default function WorkoutHistoryRoute() {
 		<section className="space-y-10">
 			<header className="space-y-2">
 				<h2 className="text-2xl font-semibold">Progress chart</h2>
-				<p className="text-sm text-app-muted">
+				<p className="text-app-muted text-sm">
 					Track weight progress per exercise and bonus reps.
 				</p>
 			</header>
 
-			<div className="rounded-3xl border border-app-border bg-app-surface/80 p-4">
+			<div className="border-app-border bg-app-surface/80 rounded-3xl border p-4">
 				{chart ? (
 					<div className="flex flex-col gap-4">
 						<svg
@@ -254,7 +263,7 @@ export default function WorkoutHistoryRoute() {
 								.map((dataset) => (
 									<div
 										key={dataset.id}
-										className="flex items-center gap-2 text-sm text-app-muted"
+										className="text-app-muted flex items-center gap-2 text-sm"
 									>
 										<span
 											className="inline-block h-2.5 w-6 rounded-full"
@@ -267,31 +276,33 @@ export default function WorkoutHistoryRoute() {
 						</div>
 					</div>
 				) : (
-					<p className="text-sm text-app-muted">No historical data yet.</p>
+					<p className="text-app-muted text-sm">No historical data yet.</p>
 				)}
 			</div>
 
 			<section className="space-y-4">
 				<h3 className="text-xl font-semibold">Workout log</h3>
 				{workouts.length === 0 ? (
-					<p className="text-sm text-app-muted">Complete a workout to see it here.</p>
+					<p className="text-app-muted text-sm">
+						Complete a workout to see it here.
+					</p>
 				) : (
 					<ul className="space-y-3">
 						{workouts.map((workout) => (
 							<li key={workout.date}>
 								<Link
 									to={`/tools/workout/workout/${workout.date}`}
-									className="block rounded-3xl border border-app-border bg-app-surface/90 p-4 transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+									className="border-app-border bg-app-surface/90 hover:border-primary focus-visible:outline-primary block rounded-3xl border p-4 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
 								>
 									<div className="flex flex-wrap items-center justify-between gap-2">
-										<p className="text-sm text-app-muted">
+										<p className="text-app-muted text-sm">
 											{formatDisplayDate(workout.date)}
 										</p>
-										<p className="text-sm font-semibold text-primary">
+										<p className="text-primary text-sm font-semibold">
 											{templateNames.get(workout.templateId) ?? 'Workout'}
 										</p>
 									</div>
-									<ul className="mt-3 space-y-2 text-sm text-app-muted">
+									<ul className="text-app-muted mt-3 space-y-2 text-sm">
 										{workout.exercises.map((exercise) => {
 											const label =
 												exerciseNames.get(exercise.id) ?? exercise.id
