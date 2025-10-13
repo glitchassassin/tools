@@ -39,7 +39,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
     "@cloudflare/vite-plugin": "^1.13.10",
-    "@playwright/test": "^1.55.1",
+    "@playwright/test": "^1.56.0",
     "@react-router/dev": "^7.5.3",
     "@tailwindcss/vite": "^4.1.4",
     "@types/node": "^22",
