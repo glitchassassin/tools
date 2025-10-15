@@ -1,5 +1,5 @@
 {
-  "name": "freedom-seed",
+  "name": "glitchassassin-tools",
   "private": true,
   "type": "module",
   "prettier": "@epic-web/config/prettier",
