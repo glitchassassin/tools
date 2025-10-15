@@ -30,6 +30,7 @@ const SessionSchema = z.object({
 const DryFireDataSchema = z.object({
 	drills: z.array(DrillConfigSchema).min(1),
 	sessions: z.array(SessionSchema),
+	chaosMode: z.boolean().default(false),
 })
 
 export type DrillConfig = z.infer<typeof DrillConfigSchema>
@@ -62,6 +63,7 @@ const DEFAULT_DRILLS: DrillConfig[] = [
 const DEFAULT_DATA: DryFireData = {
 	drills: DEFAULT_DRILLS,
 	sessions: [],
+	chaosMode: false,
 }
 
 const DryFireDataModel = declareModel({
@@ -84,6 +86,7 @@ type DryFireTrackerHelpers = {
 	completeSession: (id: string) => void
 	exportSerializedData: () => DryFireSerializedData
 	importSerializedData: (data: DryFireSerializedData) => void
+	setChaosMode: (enabled: boolean) => void
 }
 
 export function useDryFireTracker() {
@@ -194,6 +197,12 @@ export function useDryFireTracker() {
 			importSerializedData(serialized: string) {
 				const nextData = DryFireDataModel.parse(serialized)
 				setData(nextData)
+			},
+			setChaosMode(enabled: boolean) {
+				setData((prev) => ({
+					...prev,
+					chaosMode: enabled,
+				}))
 			},
 		}),
 		[data, setData],

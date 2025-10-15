@@ -10,7 +10,7 @@ export default function DryFireTrainerHome() {
 
 	const handleStartDrill = (drillId: string) => {
 		const session = helpers.createSession(drillId)
-		navigate(`/dry-fire-trainer/session/${session.id}`)
+		void navigate(`/dry-fire-trainer/session/${session.id}`)
 	}
 
 	return (

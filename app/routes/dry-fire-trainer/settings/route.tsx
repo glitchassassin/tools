@@ -138,6 +138,43 @@ export default function DryFireTrainerSettings() {
 	return (
 		<div className="space-y-8">
 			<section className="space-y-4">
+				<header>
+					<h2 className="text-xl font-semibold">Training Settings</h2>
+					<p className="text-app-muted mt-1 text-sm">
+						Configure your training experience
+					</p>
+				</header>
+
+				<div className="border-app-border bg-app-surface/80 space-y-4 rounded-2xl border p-6">
+					<div className="flex items-center justify-between">
+						<div>
+							<h3 className="font-semibold">Chaos Mode</h3>
+							<p className="text-app-muted mt-1 text-sm">
+								Random gunshot sounds play during training to simulate
+								real-world conditions
+							</p>
+						</div>
+						<button
+							type="button"
+							onClick={() => helpers.setChaosMode(!data.chaosMode)}
+							className={`focus:ring-primary relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
+								data.chaosMode ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'
+							}`}
+							role="switch"
+							aria-checked={data.chaosMode}
+							aria-label={`Chaos Mode ${data.chaosMode ? 'enabled' : 'disabled'}`}
+						>
+							<span
+								className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+									data.chaosMode ? 'translate-x-6' : 'translate-x-1'
+								}`}
+							/>
+						</button>
+					</div>
+				</div>
+			</section>
+
+			<section className="space-y-4">
 				<header className="flex items-baseline justify-between">
 					<div>
 						<h2 className="text-xl font-semibold">Drills</h2>

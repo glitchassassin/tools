@@ -18,6 +18,8 @@ type RepState =
 
 class AudioSystem {
 	private audioContext: AudioContext | null = null
+	private gunshotBuffers: AudioBuffer[] = []
+	private maxBuffers = 10
 
 	async initialize() {
 		if (!this.audioContext) {
@@ -26,6 +28,26 @@ class AudioSystem {
 		}
 		if (this.audioContext.state === 'suspended') {
 			await this.audioContext.resume()
+		}
+
+		// Pre-load multiple gunshot audio buffers for overlapping playback
+		await this.loadGunshotBuffers()
+	}
+
+	private async loadGunshotBuffers() {
+		if (!this.audioContext) return
+
+		try {
+			const response = await fetch('/gunshot.mp3')
+			const arrayBuffer = await response.arrayBuffer()
+			const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer)
+
+			// Create multiple copies of the buffer for overlapping playback
+			for (let i = 0; i < this.maxBuffers; i++) {
+				this.gunshotBuffers.push(audioBuffer)
+			}
+		} catch (error) {
+			console.warn('Failed to load gunshot audio:', error)
 		}
 	}
 
@@ -59,29 +81,73 @@ class AudioSystem {
 		this.playBeep(400, 0.2)
 	}
 
+	playGunshot() {
+		if (!this.audioContext || this.gunshotBuffers.length === 0) return
+
+		// Get the next available buffer (round-robin)
+		const buffer =
+			this.gunshotBuffers[
+				Math.floor(Math.random() * this.gunshotBuffers.length)
+			]
+
+		// Create a new audio source for this playback
+		const source = this.audioContext.createBufferSource()
+		const gainNode = this.audioContext.createGain()
+
+		// Configure the audio
+		source.buffer = buffer
+		gainNode.gain.value = 0.7 // 70% volume
+
+		// Connect the audio graph
+		source.connect(gainNode)
+		gainNode.connect(this.audioContext.destination)
+
+		// Play the sound
+		source.start()
+
+		// Clean up when finished
+		source.onended = () => {
+			source.disconnect()
+			gainNode.disconnect()
+		}
+	}
+
 	cleanup() {
 		if (this.audioContext) {
 			console.log('cleaning up audio context')
 			void this.audioContext.close()
 			this.audioContext = null
 		}
+		this.gunshotBuffers = []
 	}
 }
 
 class ShotDetector {
 	private audioContext: AudioContext | null = null
-	private analyser: AnalyserNode | null = null
+	public analyser: AnalyserNode | null = null
 	private stream: MediaStream | null = null
 	private rafId: number | null = null
-	private threshold = 0.7
+	public threshold = 0.1 // Very low threshold for recording
 	private detectionCallback: ((time: number) => void) | null = null
 	private startTime: number | null = null
 	private detected = false
+	public baselineLevel = 0
+	private baselineSamples: number[] = []
+	private maxBaselineSamples = 50
+	private audioBuffer: number[] = []
+	private isRecording = false
+	private sampleTimestamps: number[] = []
 
 	async initialize() {
 		try {
 			console.log('initializing microphone')
-			this.stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+			this.stream = await navigator.mediaDevices.getUserMedia({
+				audio: {
+					echoCancellation: false,
+					noiseSuppression: false,
+					autoGainControl: false,
+				},
+			})
 			this.audioContext = new AudioContext()
 			this.analyser = this.audioContext.createAnalyser()
 			this.analyser.fftSize = 2048
@@ -101,6 +167,11 @@ class ShotDetector {
 		this.detectionCallback = callback
 		this.startTime = Date.now()
 		this.detected = false
+		this.baselineLevel = 0
+		this.baselineSamples = []
+		this.audioBuffer = []
+		this.sampleTimestamps = []
+		this.isRecording = true
 		this.analyze()
 	}
 
@@ -111,21 +182,27 @@ class ShotDetector {
 		const dataArray = new Uint8Array(bufferLength)
 		this.analyser.getByteTimeDomainData(dataArray)
 
-		// Simple peak detection
-		let max = 0
+		// Calculate RMS for this sample
+		let sum = 0
 		for (let i = 0; i < bufferLength; i++) {
-			const value = Math.abs(dataArray[i]! - 128) / 128
-			if (value > max) {
-				max = value
-			}
+			const value = (dataArray[i]! - 128) / 128
+			sum += value * value
+		}
+		const rms = Math.sqrt(sum / bufferLength)
+
+		// Record all audio data for post-processing
+		if (this.isRecording) {
+			this.audioBuffer.push(rms)
+			this.sampleTimestamps.push(Date.now())
 		}
 
-		if (max > this.threshold && this.startTime) {
-			const elapsedTime = (Date.now() - this.startTime) / 1000
-			this.detected = true
-			this.detectionCallback(elapsedTime)
-			this.stopListening()
-			return
+		// Build baseline for display purposes
+		if (this.baselineSamples.length < this.maxBaselineSamples) {
+			this.baselineSamples.push(rms)
+		} else {
+			this.baselineLevel =
+				this.baselineSamples.reduce((a, b) => a + b, 0) /
+				this.baselineSamples.length
 		}
 
 		this.rafId = requestAnimationFrame(this.analyze)
@@ -136,8 +213,78 @@ class ShotDetector {
 			cancelAnimationFrame(this.rafId)
 			this.rafId = null
 		}
+		this.isRecording = false
+
+		// Process the recorded audio to find the trigger press
+		if (
+			this.audioBuffer.length > 0 &&
+			this.detectionCallback &&
+			this.startTime
+		) {
+			const triggerTime = this.findTriggerPress()
+			if (triggerTime !== null) {
+				this.detected = true
+				this.detectionCallback(triggerTime)
+			}
+		}
+
 		this.detectionCallback = null
 		this.startTime = null
+	}
+
+	private findTriggerPress(): number | null {
+		if (this.audioBuffer.length === 0) return null
+
+		// Calculate baseline from first 20% of samples (quiet period)
+		const baselineSamples = Math.floor(this.audioBuffer.length * 0.2)
+		const baseline =
+			this.audioBuffer.slice(0, baselineSamples).reduce((a, b) => a + b, 0) /
+			baselineSamples
+
+		// Find the most significant peak
+		let bestPeak = 0
+		let bestPeakIndex = -1
+		const minPeakHeight = baseline * 1.5 // Must be 50% above baseline
+		const minPeakDistance = 5 // Minimum samples between peaks
+
+		for (let i = 1; i < this.audioBuffer.length - 1; i++) {
+			const current = this.audioBuffer[i]!
+			const prev = this.audioBuffer[i - 1]!
+			const next = this.audioBuffer[i + 1]!
+
+			// Check if this is a local maximum
+			if (current > prev && current > next && current > minPeakHeight) {
+				// Check if this peak is far enough from the last best peak
+				if (bestPeakIndex === -1 || i - bestPeakIndex > minPeakDistance) {
+					// Calculate peak prominence (how much it stands out from surrounding values)
+					const leftMin = Math.min(
+						...this.audioBuffer.slice(Math.max(0, i - 10), i),
+					)
+					const rightMin = Math.min(
+						...this.audioBuffer.slice(
+							i + 1,
+							Math.min(this.audioBuffer.length, i + 11),
+						),
+					)
+					const prominence = current - Math.max(leftMin, rightMin)
+
+					if (prominence > bestPeak) {
+						bestPeak = prominence
+						bestPeakIndex = i
+					}
+				}
+			}
+		}
+
+		if (bestPeakIndex !== -1 && this.startTime) {
+			// Use the actual timestamp to calculate precise time
+			const peakTimestamp = this.sampleTimestamps[bestPeakIndex]
+			if (peakTimestamp) {
+				return (peakTimestamp - this.startTime) / 1000 // Convert to seconds
+			}
+		}
+
+		return null
 	}
 
 	cleanup() {
@@ -158,7 +305,7 @@ class ShotDetector {
 export default function DrillSession() {
 	const { sessionId } = useParams()
 	const navigate = useNavigate()
-	const { helpers } = useDryFireTrackerContext()
+	const { data, helpers } = useDryFireTrackerContext()
 	const [session, setSession] = useState<Session | null>(null)
 	const [currentRep, setCurrentRep] = useState(0)
 	const [repState, setRepState] = useState<RepState>('ready')
@@ -171,6 +318,7 @@ export default function DrillSession() {
 	const shotDetectorRef = useRef<ShotDetector | null>(null)
 	const delayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const parTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+	const chaosTimeoutsRef = useRef<NodeJS.Timeout[]>([])
 
 	useEffect(() => {
 		if (!sessionId) {
@@ -214,6 +362,37 @@ export default function DrillSession() {
 		}
 	}, [sessionId, navigate, helpers])
 
+	const startChaosMode = useCallback(() => {
+		if (!data.chaosMode || !session) return
+
+		// Clear any existing chaos timeouts
+		chaosTimeoutsRef.current.forEach(clearTimeout)
+		chaosTimeoutsRef.current = []
+
+		// Schedule random gunshots between 0.5s after start and 0.5s before end
+		const startTime = 500 // 0.5 seconds after start beep
+		const endTime = session.parTime * 1000 - 500 // 0.5 seconds before end beep
+		const duration = endTime - startTime
+
+		if (duration <= 0) return
+
+		// Schedule 6 random gunshots during the listening period
+		const numShots = 6
+
+		for (let i = 0; i < numShots; i++) {
+			const randomDelay = startTime + Math.random() * duration
+			const timeout = setTimeout(() => {
+				audioSystemRef.current?.playGunshot()
+			}, randomDelay)
+			chaosTimeoutsRef.current.push(timeout)
+		}
+	}, [data.chaosMode, session])
+
+	const stopChaosMode = useCallback(() => {
+		chaosTimeoutsRef.current.forEach(clearTimeout)
+		chaosTimeoutsRef.current = []
+	}, [])
+
 	useEffect(() => {
 		return () => {
 			if (delayTimeoutRef.current) {
@@ -222,8 +401,9 @@ export default function DrillSession() {
 			if (parTimeoutRef.current) {
 				clearTimeout(parTimeoutRef.current)
 			}
+			stopChaosMode()
 		}
-	}, [])
+	}, [stopChaosMode])
 
 	const startRep = useCallback(() => {
 		if (!session) return
@@ -241,6 +421,9 @@ export default function DrillSession() {
 			// Play start beep
 			audioSystemRef.current?.playStartBeep()
 
+			// Start chaos mode if enabled
+			startChaosMode()
+
 			// Start listening for shot
 			if (microphoneGranted && shotDetectorRef.current) {
 				shotDetectorRef.current.startListening((time) => {
@@ -250,16 +433,18 @@ export default function DrillSession() {
 
 			// Schedule end beep
 			parTimeoutRef.current = setTimeout(() => {
+				// Stop chaos mode before end beep
+				stopChaosMode()
 				audioSystemRef.current?.playEndBeep()
 				setRepState('waiting-for-result')
 
-				// Stop listening after 5 more seconds
+				// Continue recording for 1 more second to catch late trigger presses
 				setTimeout(() => {
 					shotDetectorRef.current?.stopListening()
-				}, 5000)
+				}, 1000)
 			}, session.parTime * 1000)
 		}, randomDelay)
-	}, [session, microphoneGranted])
+	}, [session, microphoneGranted, startChaosMode, stopChaosMode])
 
 	const handleResult = useCallback(
 		(hit: boolean) => {
