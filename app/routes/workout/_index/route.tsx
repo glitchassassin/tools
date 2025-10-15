@@ -29,9 +29,9 @@ export default function WorkoutHome() {
 
 	const maxWeights = useMemo(() => getMaxWeightByExercise(data), [data])
 
-	const handleStartWorkout = () => {
-		void helpers.ensureWorkout(todayKey)
-		void navigate(`/tools/workout/workout/${todayKey}`)
+	const handleStartWorkout = async () => {
+		const ensuredWorkout = await helpers.ensureWorkout(todayKey)
+		await navigate(`/workout/workout/${ensuredWorkout.date}`)
 	}
 
 	return (
@@ -41,7 +41,7 @@ export default function WorkoutHome() {
 					<button
 						type="button"
 						onClick={handleStartWorkout}
-						className="bg-primary text-primary-foreground focus-visible:outline-primary/70 flex h-40 w-40 items-center justify-center rounded-full text-lg font-semibold transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 active:scale-95"
+						className="bg-primary text-primary-foreground focus-visible:outline-primary/70 flex h-40 w-40 items-center justify-center rounded-full text-lg font-semibold transition hover:scale-105 focus-visible:outline focus-visible:outline-offset-4 active:scale-95"
 					>
 						{todaysWorkout ? 'Finish Workout' : 'Start Workout'}
 					</button>

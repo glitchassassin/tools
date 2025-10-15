@@ -115,21 +115,17 @@ async function importWorkoutData(
 	}
 	const fileBuffer = Buffer.from(JSON.stringify(payload, null, 2), 'utf-8')
 
-	await page
-		.getByLabel('Import workout data file')
-		.setInputFiles({
-			name: 'workout-data.json',
-			mimeType: 'application/json',
-			buffer: fileBuffer,
-		})
+	await page.getByLabel('Import workout data file').setInputFiles({
+		name: 'workout-data.json',
+		mimeType: 'application/json',
+		buffer: fileBuffer,
+	})
 
-	await expect(
-		page.getByText('Data imported successfully.'),
-	).toBeVisible()
+	await expect(page.getByText('Data imported successfully.')).toBeVisible()
 }
 
 test.beforeEach(async ({ page }) => {
-	await page.goto('/tools/workout/settings')
+	await page.goto('/workout/settings')
 	await importWorkoutData(page, DEFAULT_TEST_CONFIG, {})
 })
 
@@ -215,13 +211,13 @@ async function interceptClipboard(page: Page) {
 }
 
 async function recordHistoryWorkouts(page: Page) {
-	await page.goto('/tools/workout/workout/2025-03-01')
+	await page.goto('/workout/workout/2025-03-01')
 	await setExerciseWeight(page, 'Squat', '185')
 	await setExerciseWeight(page, 'Overhead Press', '95')
 	await setExerciseWeight(page, 'Deadlift', '225')
 	await setBonusReps(page, '5')
 
-	await page.goto('/tools/workout/workout/2025-03-03')
+	await page.goto('/workout/workout/2025-03-03')
 	await setExerciseWeight(page, 'Squat', '190')
 	await setExerciseWeight(page, 'Bench Press', '165')
 	await setExerciseWeight(page, 'Barbell Row', '155')
@@ -231,7 +227,7 @@ async function recordHistoryWorkouts(page: Page) {
 test.describe('Workout Tracker – Index Route', () => {
 	test('Start a fresh workout from the landing page', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/tools/workout')
+		await page.goto('/workout')
 
 		await runAxe(page)
 
@@ -240,12 +236,12 @@ test.describe('Workout Tracker – Index Route', () => {
 
 		const today = dateKey(new Date())
 		await button.click()
-		await expect(page).toHaveURL(`/tools/workout/workout/${today}`)
+		await expect(page).toHaveURL(`/workout/workout/${today}`)
 	})
 
 	test('Continue an in-progress workout', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/tools/workout')
+		await page.goto('/workout')
 		await runAxe(page)
 
 		const startButton = page.getByRole('button', { name: 'Start Workout' })
@@ -253,7 +249,7 @@ test.describe('Workout Tracker – Index Route', () => {
 		await setExerciseWeight(page, 'Squat', '205')
 		await setExerciseReps(page, 'Squat', [5, 5, 5, 5, 5])
 
-		await page.goto('/tools/workout')
+		await page.goto('/workout')
 
 		const button = page.getByRole('button', { name: 'Finish Workout' })
 		await expect(button).toBeVisible()
@@ -270,7 +266,7 @@ test.describe('Workout Tracker – Current Workout Route', () => {
 	test('Auto-create a workout for a new date', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
 		const date = '2025-01-05'
-		await page.goto(`/tools/workout/workout/${date}`)
+		await page.goto(`/workout/workout/${date}`)
 
 		await runAxe(page)
 
@@ -291,11 +287,11 @@ test.describe('Workout Tracker – Current Workout Route', () => {
 		const targetDate = '2025-01-03'
 
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto(`/tools/workout/workout/${previousDate}`)
+		await page.goto(`/workout/workout/${previousDate}`)
 		await setExerciseWeight(page, 'Squat', '150')
 		await setExerciseReps(page, 'Squat', [5, 5, 5, 5, 5])
 
-		await page.goto(`/tools/workout/workout/${targetDate}`)
+		await page.goto(`/workout/workout/${targetDate}`)
 
 		const squatWeight = page.getByLabel('Weight (lb)')
 		await expect(squatWeight).toHaveValue('155')
@@ -316,7 +312,7 @@ test.describe('Workout Tracker – Current Workout Route', () => {
 		const date = '2025-02-01'
 
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto(`/tools/workout/workout/${date}`)
+		await page.goto(`/workout/workout/${date}`)
 		await setExerciseWeight(page, 'Squat', '150')
 
 		const squatSection = await exerciseSection(page, 'Squat')
@@ -328,7 +324,7 @@ test.describe('Workout Tracker – Current Workout Route', () => {
 	}) => {
 		const date = '2025-02-10'
 		await page.setViewportSize({ width: 1280, height: 720 })
-		await page.goto(`/tools/workout/workout/${date}`)
+		await page.goto(`/workout/workout/${date}`)
 		await runAxe(page)
 
 		const weightInput = page.getByLabel('Weight (lb)')
@@ -389,7 +385,7 @@ test.describe('Workout Tracker – Current Workout Route', () => {
 		const date = '2025-02-15'
 		await interceptClipboard(page)
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto(`/tools/workout/workout/${date}`)
+		await page.goto(`/workout/workout/${date}`)
 
 		await setExerciseWeight(page, 'Squat', '150')
 		await setExerciseReps(page, 'Squat', [5, 5, 5, 5, 4])
@@ -414,20 +410,20 @@ test.describe('Workout Tracker – Current Workout Route', () => {
 		const date = '2025-02-20'
 		const previousDate = '2025-02-18'
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto(`/tools/workout/workout/${previousDate}`)
+		await page.goto(`/workout/workout/${previousDate}`)
 		await setExerciseWeight(page, 'Squat', '150')
 
-		await page.goto(`/tools/workout/workout/${date}`)
+		await page.goto(`/workout/workout/${date}`)
 		await setExerciseWeight(page, 'Squat', '150')
 
 		page.once('dialog', (dialog) => dialog.accept())
 		await page.getByRole('button', { name: 'Delete Workout' }).click()
-		await expect(page).toHaveURL('/tools/workout')
+		await expect(page).toHaveURL('/workout')
 		await expect(
 			page.getByRole('button', { name: 'Start Workout' }),
 		).toBeVisible()
 
-		await page.goto(`/tools/workout/workout/${date}`)
+		await page.goto(`/workout/workout/${date}`)
 		const weightInput = page.getByLabel('Weight (lb)')
 		await expect(weightInput).toHaveValue('155')
 	})
@@ -439,7 +435,7 @@ test.describe('Workout Tracker – History Route', () => {
 	}) => {
 		await page.setViewportSize({ width: 430, height: 932 })
 		await recordHistoryWorkouts(page)
-		await page.goto('/tools/workout/history')
+		await page.goto('/workout/history')
 
 		await runAxe(page)
 
@@ -458,7 +454,7 @@ test.describe('Workout Tracker – History Route', () => {
 	test('Includes bonus reps dataset in the legend', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
 		await recordHistoryWorkouts(page)
-		await page.goto('/tools/workout/history')
+		await page.goto('/workout/history')
 
 		const bonusLegend = page.getByRole('list', { name: 'Bonus datasets' })
 		await expect(
@@ -473,7 +469,7 @@ test.describe('Workout Tracker – History Route', () => {
 
 	test('Empty history shows helper text', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/tools/workout/history')
+		await page.goto('/workout/history')
 
 		await expect(
 			page.getByRole('img', { name: 'Workout history line chart' }),
@@ -484,7 +480,7 @@ test.describe('Workout Tracker – History Route', () => {
 	test('Workout log navigation', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
 		await recordHistoryWorkouts(page)
-		await page.goto('/tools/workout/history')
+		await page.goto('/workout/history')
 
 		const logEntry = page.getByRole('link', {
 			name: /3\/3\/2025/,
@@ -492,14 +488,14 @@ test.describe('Workout Tracker – History Route', () => {
 		await expect(logEntry).toContainText('Bench Press')
 
 		await logEntry.click()
-		await expect(page).toHaveURL('/tools/workout/workout/2025-03-03')
+		await expect(page).toHaveURL('/workout/workout/2025-03-03')
 	})
 })
 
 test.describe('Workout Tracker – Settings Route', () => {
 	test('Customize workout templates and bonus reps label', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/tools/workout/settings')
+		await page.goto('/workout/settings')
 
 		await runAxe(page)
 
@@ -524,7 +520,7 @@ test.describe('Workout Tracker – Settings Route', () => {
 		).toBeVisible()
 
 		const date = '2025-04-01'
-		await page.goto(`/tools/workout/workout/${date}`)
+		await page.goto(`/workout/workout/${date}`)
 		await expect(page.getByText('Front Squat')).toBeVisible()
 
 		const repInputs = page
@@ -536,10 +532,10 @@ test.describe('Workout Tracker – Settings Route', () => {
 	})
 	test('Adjust available plate denominations', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/tools/workout/workout/2025-04-10')
+		await page.goto('/workout/workout/2025-04-10')
 		await setExerciseWeight(page, 'Squat', '107.5')
 
-		await page.goto('/tools/workout/settings')
+		await page.goto('/workout/settings')
 
 		const platesField = page.getByRole('textbox', {
 			name: 'Plate denominations',
@@ -555,7 +551,7 @@ test.describe('Workout Tracker – Settings Route', () => {
 			page.getByText('Settings saved. Existing workouts updated to match.'),
 		).toBeVisible()
 
-		await page.goto('/tools/workout/workout/2025-04-10')
+		await page.goto('/workout/workout/2025-04-10')
 		const squatWeight = page.getByLabel('Weight (lb)')
 		await expect(squatWeight).toHaveValue('107.5')
 		await expect(
@@ -572,14 +568,14 @@ test.describe('Workout Tracker – Settings Route', () => {
 		await page.setViewportSize({ width: 430, height: 932 })
 
 		const workoutDate = '2025-07-12'
-		await page.goto(`/tools/workout/workout/${workoutDate}`)
+		await page.goto(`/workout/workout/${workoutDate}`)
 
 		await runAxe(page)
 
 		await setExerciseWeight(page, 'Squat', '205')
 		await setExerciseReps(page, 'Squat', [5, 5, 5, 5, 5])
 
-		await page.goto('/tools/workout/settings')
+		await page.goto('/workout/settings')
 		await runAxe(page)
 
 		const downloadPromise = page.waitForEvent('download')
@@ -628,7 +624,7 @@ test.describe('Workout Tracker – Settings Route', () => {
 
 	test('Import data updates settings and workouts', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/tools/workout/settings')
+		await page.goto('/workout/settings')
 		await runAxe(page)
 
 		const importConfig = {
@@ -698,7 +694,7 @@ test.describe('Workout Tracker – Settings Route', () => {
 		})
 		await expect(platesField).toHaveValue(importConfig.plates.join(', '))
 
-		await page.goto('/tools/workout/workout/2025-06-10')
+		await page.goto('/workout/workout/2025-06-10')
 
 		const romanianSection = await exerciseSection(
 			page,
@@ -716,7 +712,7 @@ test.describe('Workout Tracker – Settings Route', () => {
 
 	test('Import rejects malformed JSON files', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/tools/workout/settings')
+		await page.goto('/workout/settings')
 
 		const invalidBuffer = Buffer.from('{', 'utf-8')
 		await page.getByLabel('Import workout data file').setInputFiles({
@@ -735,7 +731,7 @@ test.describe('Workout Tracker – Settings Route', () => {
 
 	test('Import rejects files missing required keys', async ({ page }) => {
 		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/tools/workout/settings')
+		await page.goto('/workout/settings')
 
 		const missingKeys = Buffer.from(
 			JSON.stringify({ config: '{}' }, null, 2),

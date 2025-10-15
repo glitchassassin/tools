@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, useId, useRef } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from './tools.workout/context.client'
+import { useWorkoutTrackerContext } from '../context.client'
 import type {
 	WorkoutExerciseConfig,
 	WorkoutTrackerData,
 	WorkoutTrackerSerializedData,
-} from './tools.workout/data.client'
+} from '../data.client'
 
 export const meta: MetaFunction = () => [{ title: 'Workout Settings' }]
 
@@ -235,14 +235,14 @@ export default function WorkoutSettingsRoute() {
 					<button
 						type="button"
 						onClick={handleExportData}
-						className="bg-app-surface border-app-border text-primary hover:text-primary focus-visible:outline-primary/70 flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 active:scale-[0.99]"
+						className="bg-app-surface border-app-border text-primary hover:text-primary focus-visible:outline-primary/70 flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-offset-4 active:scale-[0.99]"
 					>
 						Export data
 					</button>
 					<button
 						type="button"
 						onClick={handleImportButtonClick}
-						className="bg-app-surface border-app-border text-primary hover:text-primary focus-visible:outline-primary/70 flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 active:scale-[0.99]"
+						className="bg-app-surface border-app-border text-primary hover:text-primary focus-visible:outline-primary/70 flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-offset-4 active:scale-[0.99]"
 					>
 						Import data
 					</button>
@@ -364,7 +364,7 @@ export default function WorkoutSettingsRoute() {
 				<div className="space-y-2">
 					<button
 						type="submit"
-						className="bg-primary text-primary-foreground focus-visible:outline-primary/70 w-full rounded-full px-4 py-3 text-base font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 active:scale-[0.99]"
+						className="bg-primary text-primary-foreground focus-visible:outline-primary/70 w-full rounded-full px-4 py-3 text-base font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-offset-4 active:scale-[0.99]"
 					>
 						Save settings
 					</button>

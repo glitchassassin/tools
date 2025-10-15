@@ -14,13 +14,13 @@ import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 import { Link } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from './tools.workout/context.client'
+import { useWorkoutTrackerContext } from '../context.client'
 import {
 	formatDisplayDate,
 	parseDateKey,
 	toDateKey,
 	summarizeSets,
-} from './tools.workout/data.client'
+} from '../data.client'
 
 ChartJS.register(
 	CategoryScale,
@@ -187,8 +187,8 @@ export default function WorkoutHistoryRoute() {
 							if (raw?.label) return raw.label
 							const parsedX = context.parsed.x
 							const dateLabel = Number.isFinite(parsedX)
-								? formatDisplayDate(toDateKey(new Date(parsedX)))
-								: context.label ?? ''
+								? formatDisplayDate(toDateKey(new Date(parsedX!)))
+								: (context.label ?? '')
 							return `${dateLabel} • ${context.formattedValue}`
 						},
 					},
@@ -320,8 +320,8 @@ export default function WorkoutHistoryRoute() {
 						{workouts.map((workout) => (
 							<li key={workout.date}>
 								<Link
-									to={`/tools/workout/workout/${workout.date}`}
-									className="border-app-border bg-app-surface/90 hover:border-primary focus-visible:outline-primary block rounded-3xl border p-4 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+									to={`/workout/workout/${workout.date}`}
+									className="border-app-border bg-app-surface/90 hover:border-primary focus-visible:outline-primary block rounded-3xl border p-4 transition focus-visible:outline focus-visible:outline-offset-4"
 								>
 									<div className="flex flex-wrap items-center justify-between gap-2">
 										<p className="text-app-muted text-sm">

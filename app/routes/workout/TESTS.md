@@ -2,11 +2,11 @@
 
 These scenarios assume a mobile viewport unless noted otherwise. Seed local
 storage state as described in each scenario setup. Run Axe against every primary
-page visited (`/tools/workout`, `/tools/workout/workout/<date>`,
-`/tools/workout/history`, `/tools/workout/settings`) and confirm no
-accessibility violations before completing the scenario.
+page visited (`/workout`, `/workout/workout/<date>`, `/workout/history`,
+`/workout/settings`) and confirm no accessibility violations before completing
+the scenario.
 
-## Index Route (`/tools/workout`)
+## Index Route (`/workout`)
 
 ### Scenario: Start a fresh workout from the landing page
 
@@ -15,7 +15,7 @@ accessibility violations before completing the scenario.
 - **Assertions**: Verify the hero section presents a prominent circular
   `Start Workout` button, max weights for each exercise appear below it, and nav
   links to History and Settings are visible. Tap `Start Workout` and confirm
-  navigation to `/tools/workout/workout/<today>`.
+  navigation to `/workout/workout/<today>`.
 
 ### Scenario: Continue an in-progress workout
 
@@ -24,7 +24,7 @@ accessibility violations before completing the scenario.
 - **Assertions**: `Start Workout` button label changes to `Finish Workout` and
   directs to the existing workout. Max weights reflect the seeded data.
 
-## Current Workout Route (`/tools/workout/workout/<date>`)
+## Current Workout Route (`/workout/workout/<date>`)
 
 ### Scenario: Auto-create a workout for a new date
 
@@ -76,10 +76,10 @@ accessibility violations before completing the scenario.
 - **Setup**: Ensure a workout exists for `<date>`.
 - **Steps**: Tap `Delete Workout`, confirm the prompt.
 - **Assertions**: Confirmation dialog shows "Are you sure?", accepting it
-  removes the workout from local storage and redirects to `/tools/workout`.
-  Returning to the workout URL recreates a fresh workout.
+  removes the workout from local storage and redirects to `/workout`. Returning
+  to the workout URL recreates a fresh workout.
 
-## History Route (`/tools/workout/history`)
+## History Route (`/workout/history`)
 
 ### Scenario: Chart displays trends for each exercise and bonus reps
 
@@ -95,10 +95,10 @@ accessibility violations before completing the scenario.
 - **Setup**: Seed at least two workouts.
 - **Steps**: Scroll to the log list, inspect entries, activate one.
 - **Assertions**: Each entry lists exercises with grouped set summaries. Tapping
-  an entry navigates to the corresponding `/tools/workout/workout/<date>` route
-  with details intact.
+  an entry navigates to the corresponding `/workout/workout/<date>` route with
+  details intact.
 
-## Settings Route (`/tools/workout/settings`)
+## Settings Route (`/workout/settings`)
 
 ### Scenario: Customize workout templates and bonus reps label
 

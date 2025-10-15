@@ -12,9 +12,9 @@ export const meta: MetaFunction = () => [
 ]
 
 const NAV_ITEMS = [
-	{ to: '/tools/workout', label: 'Workout' },
-	{ to: '/tools/workout/history', label: 'History' },
-	{ to: '/tools/workout/settings', label: 'Settings' },
+	{ to: '/workout', label: 'Workout' },
+	{ to: '/workout/history', label: 'History' },
+	{ to: '/workout/settings', label: 'Settings' },
 ]
 
 export default function WorkoutLayout() {

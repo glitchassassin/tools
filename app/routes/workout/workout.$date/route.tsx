@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import type { MetaFunction } from 'react-router'
 import { useWorkoutTrackerContext } from '../context.client'
 import {
@@ -9,6 +9,7 @@ import {
 	formatWorkoutSummary,
 	getTodayKey,
 } from '../data.client'
+import { RepsSpinner } from '~/components/reps-spinner'
 
 export const meta: MetaFunction = ({ params }) => {
 	const date = (params?.date as string | undefined) ?? getTodayKey()
@@ -30,14 +31,19 @@ export default function WorkoutDetailRoute() {
 
 	useEffect(() => {
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-			void navigate('/tools/workout')
+			void navigate('/workout')
 		}
 	}, [date, navigate])
 
 	useEffect(() => {
 		if (!date) return
 		if (workout) return
-		void helpers.ensureWorkout(date)
+		void (async () => {
+			const ensuredWorkout = helpers.ensureWorkout(date)
+			setActiveExerciseId(
+				(current) => current ?? ensuredWorkout.exercises[0]?.id ?? null,
+			)
+		})()
 	}, [date, helpers, workout])
 
 	const activeTemplate = useMemo(() => {
@@ -50,7 +56,6 @@ export default function WorkoutDetailRoute() {
 	const [activeExerciseId, setActiveExerciseId] = useState<string | null>(
 		() => workout?.exercises[0]?.id ?? null,
 	)
-
 	const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
 
 	useEffect(() => {
@@ -147,26 +152,18 @@ export default function WorkoutDetailRoute() {
 		}
 	}
 
-	const handleDelete = () => {
+	const handleDelete = async () => {
 		const confirmed = window.confirm('Are you sure?')
 		if (!confirmed) return
 		helpers.deleteWorkout(date)
-		void navigate('/tools/workout')
+		await navigate('/workout')
 	}
 
 	return (
 		<section className="space-y-8">
-			<header className="space-y-2">
-				<Link
-					to="/tools/workout"
-					className="text-app-muted hover:text-primary text-sm underline-offset-4 hover:underline"
-				>
-					← Back to index
-				</Link>
-				<div>
-					<p className="text-app-muted text-sm">{activeTemplate.name}</p>
-					<h2 className="text-2xl font-semibold">{formatDisplayDate(date)}</h2>
-				</div>
+			<header className="space-y-1">
+				<p className="text-app-muted text-sm">{activeTemplate.name}</p>
+				<h2 className="text-2xl font-semibold">{formatDisplayDate(date)}</h2>
 			</header>
 
 			<div className="space-y-4">
@@ -189,7 +186,7 @@ export default function WorkoutDetailRoute() {
 						>
 							<button
 								type="button"
-								className="focus-visible:outline-primary w-full rounded-t-3xl px-5 py-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+								className="focus-visible:outline-primary w-full rounded-t-3xl px-5 py-4 text-left focus-visible:outline focus-visible:outline-offset-4"
 								onClick={() => setActiveExerciseId(exercise.id)}
 								aria-expanded={isActive}
 							>
@@ -262,47 +259,17 @@ export default function WorkoutDetailRoute() {
 										<p className="text-app-muted text-xs tracking-[0.3em] uppercase">
 											Reps per set
 										</p>
-										<div className="mt-4 grid grid-cols-3 gap-4 sm:grid-cols-5">
+										<div className="mt-4 grid grid-cols-5 gap-4">
 											{exercise.sets.map((set, index) => (
-												<div
+												<RepsSpinner
 													key={index}
-													className="border-app-border bg-app-surface/70 flex flex-col items-center rounded-2xl border px-3 py-3"
-												>
-													<button
-														type="button"
-														className="border-primary text-primary hover:bg-primary/10 focus-visible:outline-primary h-10 w-10 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-														onClick={() =>
-															handleRepChange(exercise.id, index, set.reps + 1)
-														}
-														aria-label={`Increase reps for set ${index + 1}`}
-													>
-														+
-													</button>
-													<input
-														type="number"
-														min={0}
-														value={set.reps}
-														onChange={(event) =>
-															handleRepChange(
-																exercise.id,
-																index,
-																Number.parseInt(event.target.value, 10) || 0,
-															)
-														}
-														className="border-app-border bg-app-surface focus:border-primary my-2 w-14 rounded-lg border text-center text-lg font-semibold focus:outline-none"
-													/>
-													<button
-														type="button"
-														className="border-primary text-primary hover:bg-primary/10 focus-visible:outline-primary disabled:border-app-border disabled:text-app-muted h-10 w-10 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-														onClick={() =>
-															handleRepChange(exercise.id, index, set.reps - 1)
-														}
-														aria-label={`Decrease reps for set ${index + 1}`}
-														disabled={set.reps <= 0}
-													>
-														−
-													</button>
-												</div>
+													value={set.reps}
+													min={0}
+													label={`reps for set ${index + 1}`}
+													onChange={(nextValue) =>
+														handleRepChange(exercise.id, index, nextValue)
+													}
+												/>
 											))}
 										</div>
 									</div>
@@ -335,7 +302,7 @@ export default function WorkoutDetailRoute() {
 				<button
 					type="button"
 					onClick={handleCopy}
-					className="bg-primary text-primary-foreground focus-visible:outline-primary/70 w-full rounded-full px-4 py-3 text-base font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 active:scale-[0.99]"
+					className="bg-primary text-primary-foreground focus-visible:outline-primary/70 w-full rounded-full px-4 py-3 text-base font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-offset-4 active:scale-[0.99]"
 				>
 					Copy Workout
 				</button>
@@ -347,7 +314,7 @@ export default function WorkoutDetailRoute() {
 				<button
 					type="button"
 					onClick={handleDelete}
-					className="w-full rounded-full border border-red-500 px-4 py-3 text-base font-semibold text-red-400 transition hover:bg-red-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500"
+					className="w-full rounded-full border border-red-500 px-4 py-3 text-base font-semibold text-red-400 transition hover:bg-red-500/10 focus-visible:outline focus-visible:outline-offset-4 focus-visible:outline-red-500"
 				>
 					Delete Workout
 				</button>
