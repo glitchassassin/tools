@@ -1,52 +1,26 @@
 import type { Session } from './data.client'
 
 export function ShotResultsChart({ session }: { session: Session }) {
-	const maxTime = session.parTime * 1.5
-	const parTimePosition = (session.parTime / maxTime) * 100
-
 	return (
-		<div className="space-y-2">
+		<div className="grid grid-cols-10 gap-2">
 			{session.shots.map((shot, index) => {
-				const barWidth =
-					shot.time !== null && !shot.ignored
-						? Math.min((shot.time / maxTime) * 100, 100)
-						: 100
-				const isHit = shot.hit === true
-				const isMiss = shot.hit === false
-				const isIgnored = shot.ignored || shot.time === null
-				const isOverPar = shot.time !== null && shot.time > session.parTime
+				const colorClass =
+					shot.result === 'hit'
+						? 'bg-green-500'
+						: shot.result === 'slow'
+							? 'bg-yellow-500'
+							: shot.result === 'miss'
+								? 'bg-red-500'
+								: 'bg-app-muted/30'
 
 				return (
-					<div key={index} className="flex items-center gap-3">
-						<span className="text-app-muted w-8 text-right text-xs">
+					<div
+						key={index}
+						className={`${colorClass} flex h-12 w-12 items-center justify-center rounded-md transition-all`}
+						title={`Rep ${index + 1}: ${shot.result ?? 'Not completed'}`}
+					>
+						<span className="text-xs font-semibold text-white opacity-70">
 							{index + 1}
-						</span>
-						<div className="bg-app-border/30 relative h-6 flex-1 overflow-hidden rounded-md">
-							{/* Par time line */}
-							<div
-								className="absolute top-0 bottom-0 z-10 w-0.5 bg-blue-400"
-								style={{ left: `${parTimePosition}%` }}
-							/>
-							<div
-								className={[
-									'h-full rounded-md transition-all',
-									isMiss && !isIgnored && 'bg-red-500',
-									isMiss && isIgnored && 'bg-red-500/50',
-									isHit && isOverPar && !isIgnored && 'bg-yellow-500',
-									isHit && isOverPar && isIgnored && 'bg-yellow-500/50',
-									isHit && !isOverPar && !isIgnored && 'bg-green-500',
-									isHit && !isOverPar && isIgnored && 'bg-green-500/50',
-									shot.hit === null && 'bg-app-muted/30',
-								]
-									.filter(Boolean)
-									.join(' ')}
-								style={{ width: `${barWidth}%` }}
-							/>
-						</div>
-						<span className="text-app-muted w-16 text-right text-xs">
-							{shot.time !== null && !shot.ignored
-								? `${shot.time.toFixed(2)}s`
-								: '—'}
 						</span>
 					</div>
 				)

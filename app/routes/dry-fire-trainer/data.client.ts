@@ -12,9 +12,7 @@ const DrillConfigSchema = z.object({
 })
 
 const ShotSchema = z.object({
-	time: z.number().min(0).nullable(),
-	hit: z.boolean().nullable(),
-	ignored: z.boolean(),
+	result: z.enum(['hit', 'slow', 'miss']).nullable(),
 })
 
 const SessionSchema = z.object({
@@ -145,9 +143,7 @@ export function useDryFireTracker() {
 					drillName: drill.name,
 					parTime: drill.parTime,
 					shots: Array.from({ length: drill.reps }, () => ({
-						time: null,
-						hit: null,
-						ignored: false,
+						result: null,
 					})),
 					completed: false,
 				}
@@ -222,23 +218,18 @@ export function formatSessionDate(dateString: string) {
 }
 
 export function calculateSessionStats(session: Session) {
-	const validShots = session.shots.filter((shot) => !shot.ignored)
-	const hitShots = validShots.filter((shot) => shot.hit === true)
-	const missedShots = validShots.filter((shot) => shot.hit === false)
-	const shotsWithTime = hitShots.filter((shot) => shot.time !== null)
-
-	const averageTime =
-		shotsWithTime.length > 0
-			? shotsWithTime.reduce((sum, shot) => sum + (shot.time ?? 0), 0) /
-				shotsWithTime.length
-			: null
+	const completedShots = session.shots.filter((shot) => shot.result !== null)
+	const hitShots = completedShots.filter((shot) => shot.result === 'hit')
+	const slowShots = completedShots.filter((shot) => shot.result === 'slow')
+	const missedShots = completedShots.filter((shot) => shot.result === 'miss')
 
 	return {
-		total: validShots.length,
+		total: completedShots.length,
 		hit: hitShots.length,
+		slow: slowShots.length,
 		missed: missedShots.length,
-		hitRate: validShots.length > 0 ? hitShots.length / validShots.length : 0,
-		averageTime,
+		hitRate:
+			completedShots.length > 0 ? hitShots.length / completedShots.length : 0,
 	}
 }
 

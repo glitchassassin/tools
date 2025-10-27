@@ -49,7 +49,7 @@ export default function DryFireTrainerHistory() {
 						</p>
 					</header>
 
-					<div className="border-app-border bg-app-surface/80 grid gap-4 rounded-2xl border p-6 sm:grid-cols-3">
+					<div className="border-app-border bg-app-surface/80 grid gap-4 rounded-2xl border p-6 sm:grid-cols-4">
 						<div>
 							<p className="text-app-muted text-xs tracking-wider uppercase">
 								Hit Rate
@@ -60,20 +60,26 @@ export default function DryFireTrainerHistory() {
 						</div>
 						<div>
 							<p className="text-app-muted text-xs tracking-wider uppercase">
-								Hit / Miss
+								Hits
 							</p>
-							<p className="mt-1 text-2xl font-semibold">
-								{stats.hit} / {stats.missed}
+							<p className="mt-1 text-2xl font-semibold text-green-500">
+								{stats.hit}
 							</p>
 						</div>
 						<div>
 							<p className="text-app-muted text-xs tracking-wider uppercase">
-								Avg Time
+								Slow
 							</p>
-							<p className="text-primary mt-1 text-2xl font-semibold">
-								{stats.averageTime !== null
-									? `${stats.averageTime.toFixed(2)}s`
-									: '—'}
+							<p className="mt-1 text-2xl font-semibold text-yellow-500">
+								{stats.slow}
+							</p>
+						</div>
+						<div>
+							<p className="text-app-muted text-xs tracking-wider uppercase">
+								Misses
+							</p>
+							<p className="mt-1 text-2xl font-semibold text-red-500">
+								{stats.missed}
 							</p>
 						</div>
 					</div>
@@ -131,14 +137,19 @@ export default function DryFireTrainerHistory() {
 														: '—'}
 												</span>
 											</span>
-											{stats.averageTime !== null && (
-												<span>
-													Avg:{' '}
-													<span className="font-medium">
-														{stats.averageTime.toFixed(2)}s
-													</span>
+											<span>
+												<span className="font-medium text-green-500">
+													{stats.hit}
 												</span>
-											)}
+												{' / '}
+												<span className="font-medium text-yellow-500">
+													{stats.slow}
+												</span>
+												{' / '}
+												<span className="font-medium text-red-500">
+													{stats.missed}
+												</span>
+											</span>
 										</div>
 									</button>
 									<button

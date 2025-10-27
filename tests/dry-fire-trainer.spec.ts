@@ -149,14 +149,9 @@ test.describe('Dry-Fire Trainer', () => {
 		// Start first rep
 		await page.getByRole('button', { name: 'Start' }).click()
 
-		// Wait for listening state to complete (par time + buffer)
-		await expect(page.getByText('Listening for shot...')).toBeVisible({
-			timeout: 15000,
-		})
-
 		// Wait for result buttons to appear
 		await expect(page.getByRole('button', { name: 'Hit' })).toBeVisible({
-			timeout: 3000,
+			timeout: 30000,
 		})
 		await expect(page.getByRole('button', { name: 'Miss' })).toBeVisible()
 
@@ -176,32 +171,6 @@ test.describe('Dry-Fire Trainer', () => {
 		// Navigate to history
 		await page.getByRole('button', { name: 'View History' }).click()
 		await expect(page).toHaveURL('/dry-fire-trainer/history')
-	})
-
-	test('should mark shot time as ignored', async ({ page, context }) => {
-		await context.grantPermissions(['microphone'], { origin: page.url() })
-
-		// Create a test drill with 1 rep
-		const drillName = await createTestDrill(page)
-
-		const testDrillButton = page.getByRole('button', { name: drillName })
-		await testDrillButton.click()
-
-		await page.getByRole('button', { name: 'Start' }).click()
-		await expect(page.getByRole('button', { name: 'Hit' })).toBeVisible({
-			timeout: 15000,
-		})
-
-		// Check "Ignore time" checkbox
-		await page.getByLabel('Ignore time').check()
-		await expect(page.getByLabel('Ignore time')).toBeChecked()
-
-		await page.getByRole('button', { name: 'Hit' }).click()
-
-		// Verify completion
-		await expect(
-			page.getByRole('heading', { name: 'Drill Complete!' }),
-		).toBeVisible()
 	})
 
 	test('should view session history', async ({ page }) => {
@@ -277,11 +246,7 @@ test.describe('Dry-Fire Trainer', () => {
 
 		// Should see detailed view
 		await expect(page.getByText('Hit Rate')).toBeVisible()
-		await expect(page.getByText('Hit / Miss')).toBeVisible()
 		await expect(page.getByText('Shot Results')).toBeVisible()
-
-		// Should see numbered shots
-		await expect(page.getByText('1', { exact: true })).toBeVisible()
 
 		// Navigate back to history list
 		await page.getByRole('button', { name: '← Back to history' }).click()

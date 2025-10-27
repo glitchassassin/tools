@@ -9,12 +9,7 @@ export const meta: MetaFunction = () => [
 	{ title: 'Drill Session - Dry-Fire Trainer' },
 ]
 
-type RepState =
-	| 'ready'
-	| 'waiting-to-start'
-	| 'listening'
-	| 'waiting-for-result'
-	| 'complete'
+type RepState = 'ready' | 'waiting-to-start' | 'waiting-for-result' | 'complete'
 
 class AudioSystem {
 	private audioContext: AudioContext | null = null
@@ -23,7 +18,6 @@ class AudioSystem {
 
 	async initialize() {
 		if (!this.audioContext) {
-			console.log('creating audio context')
 			this.audioContext = new AudioContext()
 		}
 		if (this.audioContext.state === 'suspended') {
@@ -84,7 +78,7 @@ class AudioSystem {
 	playGunshot() {
 		if (!this.audioContext || this.gunshotBuffers.length === 0) return
 
-		// Get the next available buffer (round-robin)
+		// Get a random buffer
 		const buffer =
 			this.gunshotBuffers[
 				Math.floor(Math.random() * this.gunshotBuffers.length)
@@ -114,191 +108,10 @@ class AudioSystem {
 
 	cleanup() {
 		if (this.audioContext) {
-			console.log('cleaning up audio context')
 			void this.audioContext.close()
 			this.audioContext = null
 		}
 		this.gunshotBuffers = []
-	}
-}
-
-class ShotDetector {
-	private audioContext: AudioContext | null = null
-	public analyser: AnalyserNode | null = null
-	private stream: MediaStream | null = null
-	private rafId: number | null = null
-	public threshold = 0.1 // Very low threshold for recording
-	private detectionCallback: ((time: number) => void) | null = null
-	private startTime: number | null = null
-	private detected = false
-	public baselineLevel = 0
-	private baselineSamples: number[] = []
-	private maxBaselineSamples = 50
-	private audioBuffer: number[] = []
-	private isRecording = false
-	private sampleTimestamps: number[] = []
-
-	async initialize() {
-		try {
-			console.log('initializing microphone')
-			this.stream = await navigator.mediaDevices.getUserMedia({
-				audio: {
-					echoCancellation: false,
-					noiseSuppression: false,
-					autoGainControl: false,
-				},
-			})
-			this.audioContext = new AudioContext()
-			this.analyser = this.audioContext.createAnalyser()
-			this.analyser.fftSize = 2048
-			this.analyser.smoothingTimeConstant = 0.3
-
-			const source = this.audioContext.createMediaStreamSource(this.stream)
-			source.connect(this.analyser)
-
-			return true
-		} catch (error) {
-			console.error('Failed to initialize microphone:', error)
-			return false
-		}
-	}
-
-	startListening(callback: (time: number) => void) {
-		this.detectionCallback = callback
-		this.startTime = Date.now()
-		this.detected = false
-		this.baselineLevel = 0
-		this.baselineSamples = []
-		this.audioBuffer = []
-		this.sampleTimestamps = []
-		this.isRecording = true
-		this.analyze()
-	}
-
-	private analyze = () => {
-		if (!this.analyser || !this.detectionCallback || this.detected) return
-
-		const bufferLength = this.analyser.fftSize
-		const dataArray = new Uint8Array(bufferLength)
-		this.analyser.getByteTimeDomainData(dataArray)
-
-		// Calculate RMS for this sample
-		let sum = 0
-		for (let i = 0; i < bufferLength; i++) {
-			const value = (dataArray[i]! - 128) / 128
-			sum += value * value
-		}
-		const rms = Math.sqrt(sum / bufferLength)
-
-		// Record all audio data for post-processing
-		if (this.isRecording) {
-			this.audioBuffer.push(rms)
-			this.sampleTimestamps.push(Date.now())
-		}
-
-		// Build baseline for display purposes
-		if (this.baselineSamples.length < this.maxBaselineSamples) {
-			this.baselineSamples.push(rms)
-		} else {
-			this.baselineLevel =
-				this.baselineSamples.reduce((a, b) => a + b, 0) /
-				this.baselineSamples.length
-		}
-
-		this.rafId = requestAnimationFrame(this.analyze)
-	}
-
-	stopListening() {
-		if (this.rafId !== null) {
-			cancelAnimationFrame(this.rafId)
-			this.rafId = null
-		}
-		this.isRecording = false
-
-		// Process the recorded audio to find the trigger press
-		if (
-			this.audioBuffer.length > 0 &&
-			this.detectionCallback &&
-			this.startTime
-		) {
-			const triggerTime = this.findTriggerPress()
-			if (triggerTime !== null) {
-				this.detected = true
-				this.detectionCallback(triggerTime)
-			}
-		}
-
-		this.detectionCallback = null
-		this.startTime = null
-	}
-
-	private findTriggerPress(): number | null {
-		if (this.audioBuffer.length === 0) return null
-
-		// Calculate baseline from first 20% of samples (quiet period)
-		const baselineSamples = Math.floor(this.audioBuffer.length * 0.2)
-		const baseline =
-			this.audioBuffer.slice(0, baselineSamples).reduce((a, b) => a + b, 0) /
-			baselineSamples
-
-		// Find the most significant peak
-		let bestPeak = 0
-		let bestPeakIndex = -1
-		const minPeakHeight = baseline * 1.5 // Must be 50% above baseline
-		const minPeakDistance = 5 // Minimum samples between peaks
-
-		for (let i = 1; i < this.audioBuffer.length - 1; i++) {
-			const current = this.audioBuffer[i]!
-			const prev = this.audioBuffer[i - 1]!
-			const next = this.audioBuffer[i + 1]!
-
-			// Check if this is a local maximum
-			if (current > prev && current > next && current > minPeakHeight) {
-				// Check if this peak is far enough from the last best peak
-				if (bestPeakIndex === -1 || i - bestPeakIndex > minPeakDistance) {
-					// Calculate peak prominence (how much it stands out from surrounding values)
-					const leftMin = Math.min(
-						...this.audioBuffer.slice(Math.max(0, i - 10), i),
-					)
-					const rightMin = Math.min(
-						...this.audioBuffer.slice(
-							i + 1,
-							Math.min(this.audioBuffer.length, i + 11),
-						),
-					)
-					const prominence = current - Math.max(leftMin, rightMin)
-
-					if (prominence > bestPeak) {
-						bestPeak = prominence
-						bestPeakIndex = i
-					}
-				}
-			}
-		}
-
-		if (bestPeakIndex !== -1 && this.startTime) {
-			// Use the actual timestamp to calculate precise time
-			const peakTimestamp = this.sampleTimestamps[bestPeakIndex]
-			if (peakTimestamp) {
-				return (peakTimestamp - this.startTime) / 1000 // Convert to seconds
-			}
-		}
-
-		return null
-	}
-
-	cleanup() {
-		this.stopListening()
-		if (this.stream) {
-			console.log('releasing microphone')
-			this.stream.getTracks().forEach((track) => track.stop())
-			this.stream = null
-		}
-		if (this.audioContext) {
-			void this.audioContext.close()
-			this.audioContext = null
-		}
-		this.analyser = null
 	}
 }
 
@@ -309,13 +122,8 @@ export default function DrillSession() {
 	const [session, setSession] = useState<Session | null>(null)
 	const [currentRep, setCurrentRep] = useState(0)
 	const [repState, setRepState] = useState<RepState>('ready')
-	const [detectedTime, setDetectedTime] = useState<number | null>(null)
-	const [ignoreTime, setIgnoreTime] = useState(false)
-	const [microphoneError, setMicrophoneError] = useState<string | null>(null)
-	const [microphoneGranted, setMicrophoneGranted] = useState(false)
 
 	const audioSystemRef = useRef<AudioSystem | null>(null)
-	const shotDetectorRef = useRef<ShotDetector | null>(null)
 	const delayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const parTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const chaosTimeoutsRef = useRef<NodeJS.Timeout[]>([])
@@ -340,27 +148,10 @@ export default function DrillSession() {
 		audioSystemRef.current = new AudioSystem()
 		void audioSystemRef.current.initialize()
 
-		// Initialize shot detector
-		const initMicrophone = async () => {
-			shotDetectorRef.current = new ShotDetector()
-			const success = await shotDetectorRef.current.initialize()
-			if (success) {
-				setMicrophoneGranted(true)
-			} else {
-				setMicrophoneError(
-					'Microphone access denied. You can still complete the drill, but shot times will not be detected automatically.',
-				)
-			}
-		}
-
-		void initMicrophone()
-
 		return () => {
-			// Clean up resources and stop media tracks
-			shotDetectorRef.current?.cleanup()
 			audioSystemRef.current?.cleanup()
 		}
-	}, [sessionId, navigate, helpers])
+	}, [])
 
 	const startChaosMode = useCallback(() => {
 		if (!data.chaosMode || !session) return
@@ -408,54 +199,36 @@ export default function DrillSession() {
 	const startRep = useCallback(() => {
 		if (!session) return
 
-		setDetectedTime(null)
-		setIgnoreTime(false)
 		setRepState('waiting-to-start')
 
 		// Random delay between 5-10 seconds before start beep
 		const randomDelay = 5000 + Math.random() * 5000
 
 		delayTimeoutRef.current = setTimeout(() => {
-			setRepState('listening')
-
 			// Play start beep
 			audioSystemRef.current?.playStartBeep()
 
 			// Start chaos mode if enabled
 			startChaosMode()
 
-			// Start listening for shot
-			if (microphoneGranted && shotDetectorRef.current) {
-				shotDetectorRef.current.startListening((time) => {
-					setDetectedTime(time)
-				})
-			}
-
-			// Schedule end beep
+			// Schedule end beep and transition to waiting-for-result
 			parTimeoutRef.current = setTimeout(() => {
 				// Stop chaos mode before end beep
 				stopChaosMode()
 				audioSystemRef.current?.playEndBeep()
 				setRepState('waiting-for-result')
-
-				// Continue recording for 1 more second to catch late trigger presses
-				setTimeout(() => {
-					shotDetectorRef.current?.stopListening()
-				}, 1000)
 			}, session.parTime * 1000)
 		}, randomDelay)
-	}, [session, microphoneGranted, startChaosMode, stopChaosMode])
+	}, [session, startChaosMode, stopChaosMode])
 
 	const handleResult = useCallback(
-		(hit: boolean) => {
+		(result: 'hit' | 'slow' | 'miss') => {
 			if (!session || repState !== 'waiting-for-result') return
 
 			// Record the result
 			const updatedShots: Shot[] = [...session.shots]
 			updatedShots[currentRep] = {
-				time: detectedTime,
-				hit,
-				ignored: ignoreTime,
+				result,
 			}
 
 			const updatedSession = {
@@ -476,15 +249,7 @@ export default function DrillSession() {
 				startRep()
 			}
 		},
-		[
-			session,
-			repState,
-			currentRep,
-			detectedTime,
-			ignoreTime,
-			helpers,
-			startRep,
-		],
+		[session, repState, currentRep, helpers, startRep],
 	)
 
 	const handleFinish = () => {
@@ -501,9 +266,15 @@ export default function DrillSession() {
 
 	if (repState === 'complete') {
 		const hitCount = session.shots.filter(
-			(shot) => shot.hit === true && !shot.ignored,
+			(shot) => shot.result === 'hit',
 		).length
-		const totalCount = session.shots.filter((shot) => !shot.ignored).length
+		const slowCount = session.shots.filter(
+			(shot) => shot.result === 'slow',
+		).length
+		const missCount = session.shots.filter(
+			(shot) => shot.result === 'miss',
+		).length
+		const totalCount = hitCount + slowCount + missCount
 
 		return (
 			<div className="space-y-6">
@@ -519,6 +290,24 @@ export default function DrillSession() {
 						<p className="text-app-muted mt-2 text-sm">
 							{hitCount} / {totalCount} hit
 						</p>
+					</div>
+					<div className="flex justify-center gap-4">
+						<div className="border-app-border bg-app-surface/80 rounded-xl border px-6 py-4">
+							<p className="text-app-muted text-xs tracking-wider uppercase">
+								Slow
+							</p>
+							<p className="mt-1 text-2xl font-bold text-yellow-500">
+								{slowCount}
+							</p>
+						</div>
+						<div className="border-app-border bg-app-surface/80 rounded-xl border px-6 py-4">
+							<p className="text-app-muted text-xs tracking-wider uppercase">
+								Miss
+							</p>
+							<p className="mt-1 text-2xl font-bold text-red-500">
+								{missCount}
+							</p>
+						</div>
 					</div>
 				</section>
 
@@ -556,12 +345,6 @@ export default function DrillSession() {
 						{currentRep + 1} / {session.shots.length}
 					</p>
 				</div>
-
-				{microphoneError && (
-					<div className="mx-auto max-w-md rounded-xl border border-yellow-500/50 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-400">
-						{microphoneError}
-					</div>
-				)}
 			</section>
 
 			{repState === 'ready' && (
@@ -587,64 +370,34 @@ export default function DrillSession() {
 				</div>
 			)}
 
-			{repState === 'listening' && (
-				<div className="space-y-6 text-center">
-					<div className="border-primary/40 bg-primary/10 mx-auto inline-flex h-32 w-32 items-center justify-center rounded-full border-4">
-						<div className="bg-primary h-24 w-24 animate-pulse rounded-full" />
-					</div>
-					<p className="text-app-muted text-sm">Listening for shot...</p>
-					{detectedTime !== null && (
-						<p className="text-primary text-lg font-semibold">
-							Shot detected: {detectedTime.toFixed(2)}s
-						</p>
-					)}
-				</div>
-			)}
-
 			{repState === 'waiting-for-result' && (
 				<div className="space-y-6">
-					{detectedTime !== null ? (
-						<div className="text-center">
-							<p className="text-app-muted text-sm">Shot time</p>
-							<p className="text-primary text-4xl font-bold">
-								{detectedTime.toFixed(2)}s
-							</p>
-						</div>
-					) : (
-						<div className="text-center">
-							<p className="text-app-muted text-sm">No time recorded</p>
-						</div>
-					)}
+					<div className="text-center">
+						<p className="text-app-muted mb-4 text-sm">How did you perform?</p>
+					</div>
 
-					<div className="space-y-4">
-						<div className="flex justify-center gap-4">
-							<button
-								type="button"
-								onClick={() => handleResult(true)}
-								className="max-w-xs flex-1 rounded-lg bg-green-500 px-6 py-4 text-lg font-semibold text-white transition hover:bg-green-600"
-							>
-								Hit
-							</button>
-							<button
-								type="button"
-								onClick={() => handleResult(false)}
-								className="max-w-xs flex-1 rounded-lg bg-red-500 px-6 py-4 text-lg font-semibold text-white transition hover:bg-red-600"
-							>
-								Miss
-							</button>
-						</div>
-
-						<div className="flex justify-center">
-							<label className="text-app-muted flex items-center gap-2 text-sm">
-								<input
-									type="checkbox"
-									checked={ignoreTime}
-									onChange={(e) => setIgnoreTime(e.target.checked)}
-									className="accent-primary h-4 w-4"
-								/>
-								Ignore time
-							</label>
-						</div>
+					<div className="flex justify-center gap-4">
+						<button
+							type="button"
+							onClick={() => handleResult('hit')}
+							className="max-w-xs flex-1 rounded-lg bg-green-500 px-6 py-4 text-lg font-semibold text-white transition hover:bg-green-600"
+						>
+							Hit
+						</button>
+						<button
+							type="button"
+							onClick={() => handleResult('slow')}
+							className="max-w-xs flex-1 rounded-lg bg-yellow-500 px-6 py-4 text-lg font-semibold text-white transition hover:bg-yellow-600"
+						>
+							Slow
+						</button>
+						<button
+							type="button"
+							onClick={() => handleResult('miss')}
+							className="max-w-xs flex-1 rounded-lg bg-red-500 px-6 py-4 text-lg font-semibold text-white transition hover:bg-red-600"
+						>
+							Miss
+						</button>
 					</div>
 				</div>
 			)}
