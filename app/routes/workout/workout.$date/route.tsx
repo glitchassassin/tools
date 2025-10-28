@@ -57,6 +57,7 @@ export default function WorkoutDetailRoute() {
 		() => workout?.exercises[0]?.id ?? null,
 	)
 	const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
+	const [deleteConfirm, setDeleteConfirm] = useState(false)
 
 	useEffect(() => {
 		if (!workout) return
@@ -76,6 +77,12 @@ export default function WorkoutDetailRoute() {
 			helpers.setWorkout(date, aligned)
 		}
 	}, [activeTemplate, helpers, workout, date])
+
+	useEffect(() => {
+		if (!deleteConfirm) return
+		const timeoutId = setTimeout(() => setDeleteConfirm(false), 3000)
+		return () => clearTimeout(timeoutId)
+	}, [deleteConfirm])
 
 	if (!workout || !activeTemplate) {
 		return (
@@ -153,8 +160,10 @@ export default function WorkoutDetailRoute() {
 	}
 
 	const handleDelete = async () => {
-		const confirmed = window.confirm('Are you sure?')
-		if (!confirmed) return
+		if (!deleteConfirm) {
+			setDeleteConfirm(true)
+			return
+		}
 		helpers.deleteWorkout(date)
 		await navigate('/workout')
 	}
@@ -316,7 +325,7 @@ export default function WorkoutDetailRoute() {
 					onClick={handleDelete}
 					className="w-full rounded-full border border-red-500 px-4 py-3 text-base font-semibold text-red-400 transition hover:bg-red-500/10 focus-visible:outline focus-visible:outline-offset-4 focus-visible:outline-red-500"
 				>
-					Delete Workout
+					{deleteConfirm ? 'Are you sure?' : 'Delete Workout'}
 				</button>
 			</section>
 		</section>

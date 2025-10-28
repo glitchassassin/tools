@@ -416,8 +416,12 @@ test.describe('Workout Tracker – Current Workout Route', () => {
 		await page.goto(`/workout/workout/${date}`)
 		await setExerciseWeight(page, 'Squat', '150')
 
-		page.once('dialog', (dialog) => dialog.accept())
-		await page.getByRole('button', { name: 'Delete Workout' }).click()
+		const deleteButton = page.getByRole('button', { name: 'Delete Workout' })
+		await deleteButton.click()
+		await expect(
+			page.getByRole('button', { name: 'Are you sure?' }),
+		).toBeVisible()
+		await page.getByRole('button', { name: 'Are you sure?' }).click()
 		await expect(page).toHaveURL('/workout')
 		await expect(
 			page.getByRole('button', { name: 'Start Workout' }),
