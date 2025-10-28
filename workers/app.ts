@@ -17,11 +17,10 @@ const requestHandler = createRequestHandler(
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url)
-		const isLocalhost =
-			url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+		const isDevelopment = env.ENVIRONMENT === 'development'
 
-		// Force HTTPS - redirect HTTP to HTTPS (except for localhost)
-		if (url.protocol === 'http:' && !isLocalhost) {
+		// Force HTTPS - redirect HTTP to HTTPS (except in development)
+		if (url.protocol === 'http:' && !isDevelopment) {
 			url.protocol = 'https:'
 			return Response.redirect(url.toString(), 301)
 		}
@@ -30,9 +29,9 @@ export default {
 			cloudflare: { env, ctx },
 		})
 
-		// Add HSTS header for HTTPS-only enforcement (except for localhost)
+		// Add HSTS header for HTTPS-only enforcement (except in development)
 		const headers = new Headers(response.headers)
-		if (!isLocalhost) {
+		if (!isDevelopment) {
 			headers.set(
 				'Strict-Transport-Security',
 				'max-age=31536000; includeSubDomains; preload',
