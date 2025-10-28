@@ -118,6 +118,9 @@ jobs:
       - name: Install Node.js and dependencies
         uses: bahmutov/npm-install@v1
 
+      - name: Build application
+        run: npm run build
+
       - name: Deploy to production
         id: deploy
         uses: cloudflare/wrangler-action@v3
