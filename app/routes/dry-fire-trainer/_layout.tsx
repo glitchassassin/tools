@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router'
+import { Link, NavLink, Outlet } from 'react-router'
 import type { MetaFunction } from 'react-router'
 import { ClientOnly } from 'remix-utils/client-only'
 import { DryFireTrackerProvider } from './context.client'
@@ -21,9 +21,12 @@ export default function DryFireTrainerLayout() {
 	return (
 		<main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
 			<header className="space-y-2">
-				<p className="text-app-muted text-sm tracking-[0.3em] uppercase">
-					Tools
-				</p>
+				<Link
+					to="/"
+					className="text-app-muted hover:text-primary text-sm tracking-[0.3em] uppercase transition"
+				>
+					« Back to Tools
+				</Link>
 				<h1 className="text-3xl font-semibold">Dry-Fire Trainer</h1>
 			</header>
 
