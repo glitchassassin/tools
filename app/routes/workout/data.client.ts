@@ -109,7 +109,7 @@ const WORKOUT_LEGACY_STORAGE_KEY = 'workout-tracker'
 
 type WorkoutTrackerHelpers = {
 	getWorkout: (date: string) => WorkoutEntry | null
-	ensureWorkout: (date: string) => WorkoutEntry
+	getWorkoutByDate: (date: string) => WorkoutEntry
 	setWorkout: (date: string, workout: WorkoutEntry) => void
 	upsertWorkout: (
 		date: string,
@@ -124,7 +124,9 @@ type WorkoutTrackerHelpers = {
 type SetWorkoutEntries = (
 	value:
 		| WorkoutTrackerData['workouts']
-		| ((prev: WorkoutTrackerData['workouts']) => WorkoutTrackerData['workouts']),
+		| ((
+				prev: WorkoutTrackerData['workouts'],
+		  ) => WorkoutTrackerData['workouts']),
 ) => void
 
 export function useWorkoutTracker() {
@@ -143,9 +145,7 @@ export function useWorkoutTracker() {
 		)
 		if (!legacySerialized) return
 		const hasConfig = window.localStorage.getItem(WORKOUT_CONFIG_STORAGE_KEY)
-		const hasWorkouts = window.localStorage.getItem(
-			WORKOUT_ENTRIES_STORAGE_KEY,
-		)
+		const hasWorkouts = window.localStorage.getItem(WORKOUT_ENTRIES_STORAGE_KEY)
 		if (hasConfig || hasWorkouts) {
 			window.localStorage.removeItem(WORKOUT_LEGACY_STORAGE_KEY)
 			return
@@ -172,32 +172,25 @@ export function useWorkoutTracker() {
 			getWorkout(date: string) {
 				return data.workouts[date] ?? null
 			},
-			ensureWorkout(date: string) {
+			getWorkoutByDate(date: string) {
 				const existing = data.workouts[date]
 				if (existing) return existing
-				let created: WorkoutEntry | null = null
-				setWorkouts((prev) => {
-					if (prev[date]) {
-						created = prev[date]!
-						return prev
-					}
-					const nextWorkout = createWorkoutEntry(
-						{ config, workouts: prev },
-						date,
-					)
-					created = nextWorkout
-					return {
-						...prev,
-						[date]: nextWorkout,
-					}
-				})
-				return created ?? createWorkoutEntry(data, date)
+				// Return an empty workout for editing without persisting it
+				// It will be persisted when data is added via setWorkout/upsertWorkout
+				return createWorkoutEntry(data, date)
 			},
 			setWorkout(date: string, workout: WorkoutEntry) {
-				setWorkouts((prev) => ({
-					...prev,
-					[date]: workout,
-				}))
+				setWorkouts((prev) => {
+					// Only persist workouts that have actual data
+					if (!hasWorkoutData(workout)) {
+						const { [date]: _removed, ...rest } = prev
+						return rest
+					}
+					return {
+						...prev,
+						[date]: workout,
+					}
+				})
 			},
 			upsertWorkout(
 				date: string,
@@ -205,9 +198,13 @@ export function useWorkoutTracker() {
 			) {
 				setWorkouts((prev) => {
 					const existing =
-						prev[date] ??
-						createWorkoutEntry({ config, workouts: prev }, date)
+						prev[date] ?? createWorkoutEntry({ config, workouts: prev }, date)
 					const nextWorkout = builder(existing)
+					// Only persist workouts that have actual data
+					if (!hasWorkoutData(nextWorkout)) {
+						const { [date]: _removed, ...rest } = prev
+						return rest
+					}
 					return {
 						...prev,
 						[date]: nextWorkout,
@@ -225,10 +222,7 @@ export function useWorkoutTracker() {
 				setWorkouts((prev) => reconcileWorkoutsWithConfig(prev, config))
 			},
 			exportSerializedData() {
-				const ensureSerializedValue = (
-					key: string,
-					fallback: () => string,
-				) => {
+				const ensureSerializedValue = (key: string, fallback: () => string) => {
 					const existing = window.localStorage.getItem(key)
 					if (existing != null) {
 						return existing
@@ -255,10 +249,7 @@ export function useWorkoutTracker() {
 			importSerializedData(serialized) {
 				const nextConfig = WorkoutConfigModel.parse(serialized.config)
 				const nextWorkouts = WorkoutEntriesModel.parse(serialized.workouts)
-				const reconciled = reconcileWorkoutsWithConfig(
-					nextWorkouts,
-					nextConfig,
-				)
+				const reconciled = reconcileWorkoutsWithConfig(nextWorkouts, nextConfig)
 				setConfig(nextConfig)
 				setWorkouts(reconciled)
 			},
@@ -366,6 +357,23 @@ export function ensureWorkoutExists(
 		}
 	})
 	return created ?? createWorkoutEntry(data, date)
+}
+
+export function hasWorkoutData(workout: WorkoutEntry): boolean {
+	// Check if any exercise has weight set
+	const hasWeight = workout.exercises.some(
+		(exercise) => exercise.weight != null,
+	)
+
+	// Check if any set has reps > 0
+	const hasReps = workout.exercises.some((exercise) =>
+		exercise.sets.some((set) => set.reps > 0),
+	)
+
+	// Check if bonus reps are set
+	const hasBonusReps = workout.bonusReps != null && workout.bonusReps > 0
+
+	return hasWeight || hasReps || hasBonusReps
 }
 
 export function summarizeSets(exercise: WorkoutExerciseEntry) {

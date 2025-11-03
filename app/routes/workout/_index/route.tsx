@@ -12,7 +12,7 @@ export const meta: MetaFunction = () => [{ title: 'Workout Tracker' }]
 
 export default function WorkoutHome() {
 	const navigate = useNavigate()
-	const { data, helpers } = useWorkoutTrackerContext()
+	const { data } = useWorkoutTrackerContext()
 	const todayKey = getTodayKey()
 	const todaysWorkout = data.workouts[todayKey] ?? null
 	const templateLookup = useMemo(() => {
@@ -30,8 +30,7 @@ export default function WorkoutHome() {
 	const maxWeights = useMemo(() => getMaxWeightByExercise(data), [data])
 
 	const handleStartWorkout = async () => {
-		const ensuredWorkout = await helpers.ensureWorkout(todayKey)
-		await navigate(`/workout/workout/${ensuredWorkout.date}`)
+		await navigate(`/workout/workout/${todayKey}`)
 	}
 
 	return (

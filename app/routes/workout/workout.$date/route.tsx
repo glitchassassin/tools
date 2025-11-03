@@ -27,7 +27,7 @@ export default function WorkoutDetailRoute() {
 	const navigate = useNavigate()
 	const date = params.date ?? getTodayKey()
 	const { data, helpers } = useWorkoutTrackerContext()
-	const workout = data.workouts[date] ?? null
+	const workout = helpers.getWorkoutByDate(date)
 
 	useEffect(() => {
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -35,32 +35,20 @@ export default function WorkoutDetailRoute() {
 		}
 	}, [date, navigate])
 
-	useEffect(() => {
-		if (!date) return
-		if (workout) return
-		void (async () => {
-			const ensuredWorkout = helpers.ensureWorkout(date)
-			setActiveExerciseId(
-				(current) => current ?? ensuredWorkout.exercises[0]?.id ?? null,
-			)
-		})()
-	}, [date, helpers, workout])
-
 	const activeTemplate = useMemo(() => {
 		const template = data.config.templates.find(
-			(item) => item.id === workout?.templateId,
+			(item) => item.id === workout.templateId,
 		)
 		return template ?? data.config.templates[0] ?? null
-	}, [data.config.templates, workout?.templateId])
+	}, [data.config.templates, workout.templateId])
 
 	const [activeExerciseId, setActiveExerciseId] = useState<string | null>(
-		() => workout?.exercises[0]?.id ?? null,
+		() => workout.exercises[0]?.id ?? null,
 	)
 	const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
 	const [deleteConfirm, setDeleteConfirm] = useState(false)
 
 	useEffect(() => {
-		if (!workout) return
 		const firstId = workout.exercises[0]?.id ?? null
 		if (
 			!activeExerciseId ||
@@ -71,7 +59,7 @@ export default function WorkoutDetailRoute() {
 	}, [workout, activeExerciseId])
 
 	useEffect(() => {
-		if (!workout || !activeTemplate) return
+		if (!activeTemplate) return
 		const aligned = alignWorkoutWithTemplate(workout, activeTemplate)
 		if (aligned !== workout) {
 			helpers.setWorkout(date, aligned)
@@ -84,7 +72,7 @@ export default function WorkoutDetailRoute() {
 		return () => clearTimeout(timeoutId)
 	}, [deleteConfirm])
 
-	if (!workout || !activeTemplate) {
+	if (!activeTemplate) {
 		return (
 			<section className="space-y-6">
 				<header>
