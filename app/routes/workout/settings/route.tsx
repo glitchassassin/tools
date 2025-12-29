@@ -1,19 +1,43 @@
 import { useEffect, useMemo, useState, useId, useRef } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
+import { useNavigate, useOutletContext, useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from '../context.client'
+import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
+import { updateWorkoutSettings, upsertWorkoutTemplate } from '../data.server'
 import type {
 	WorkoutExerciseConfig,
 	WorkoutTrackerData,
-	WorkoutTrackerSerializedData,
-} from '../data.client'
+	WorkoutTemplate,
+} from '../data.server'
 
 export const meta: MetaFunction = () => [{ title: 'Workout Settings' }]
 
+export const action = async ({ request, context }: Route.ActionArgs) => {
+	const db = getDb(context.cloudflare.env);
+	const formData = await request.formData();
+	const intent = formData.get('intent');
+
+	if (intent === 'update-settings') {
+		const bonusLabel = formData.get('bonusLabel') as string;
+		const plates = JSON.parse(formData.get('plates') as string) as number[];
+		const templates = JSON.parse(formData.get('templates') as string) as WorkoutTemplate[];
+
+		await updateWorkoutSettings(db, { bonusLabel, plates });
+		for (const template of templates) {
+			await upsertWorkoutTemplate(db, template);
+		}
+		return { success: true };
+	}
+
+	return { success: false };
+}
+
 type DraftConfig = WorkoutTrackerData['config']
 
-export default function WorkoutSettingsRoute() {
-	const { data, helpers } = useWorkoutTrackerContext()
+export default function WorkoutSettingsRoute({ matches }: Route.ComponentProps) {
+	const data = matches[1].loaderData.data
+	const fetcher = useFetcher()
 	const [draftConfig, setDraftConfig] = useState<DraftConfig>(data.config)
 	const [platesInput, setPlatesInput] = useState(data.config.plates.join(', '))
 	const [status, setStatus] = useState<'idle' | 'saved'>('idle')
@@ -90,95 +114,11 @@ export default function WorkoutSettingsRoute() {
 	}
 
 	const handleExportData = () => {
-		try {
-			const serialized = helpers.exportSerializedData()
-			const fileContents = JSON.stringify(serialized, null, 2)
-			const blob = new Blob([fileContents], { type: 'application/json' })
-			const url = URL.createObjectURL(blob)
-			const timestamp = new Date().toISOString().split('T')[0] ?? 'export'
-			const anchor = document.createElement('a')
-			anchor.href = url
-			anchor.download = `workout-tracker-data-${timestamp}.json`
-			anchor.click()
-			URL.revokeObjectURL(url)
-			setDataMessage({
-				type: 'success',
-				text: 'Data exported. Download started.',
-			})
-		} catch (error) {
-			console.error(error)
-			setDataMessage({
-				type: 'error',
-				text: 'Unable to export data.',
-			})
-		}
+		setDataMessage({ type: 'error', text: 'Export currently disabled' })
 	}
 
 	const handleImportData = async (event: ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0]
-		if (!file) {
-			return
-		}
-
-		try {
-			const contents = await file.text()
-
-			let parsed: unknown
-			try {
-				parsed = JSON.parse(contents) as unknown
-			} catch {
-				setDataMessage({
-					type: 'error',
-					text: 'Import failed: file does not contain valid JSON.',
-				})
-				return
-			}
-
-			if (!parsed || typeof parsed !== 'object') {
-				setDataMessage({
-					type: 'error',
-					text: 'Import failed: file format is invalid.',
-				})
-				return
-			}
-
-			const candidate = parsed as Partial<WorkoutTrackerSerializedData>
-			if (
-				typeof candidate.config !== 'string' ||
-				typeof candidate.workouts !== 'string'
-			) {
-				setDataMessage({
-					type: 'error',
-					text: 'Import failed: file must include config and workouts strings.',
-				})
-				return
-			}
-
-			try {
-				helpers.importSerializedData({
-					config: candidate.config,
-					workouts: candidate.workouts,
-				})
-				setDataMessage({
-					type: 'success',
-					text: 'Data imported successfully.',
-				})
-			} catch (error) {
-				console.error(error)
-				setDataMessage({
-					type: 'error',
-					text: 'Import failed: file contents are not valid.',
-				})
-			}
-		} catch (error) {
-			console.error(error)
-			setDataMessage({
-				type: 'error',
-				text: 'Import failed: unable to read the selected file.',
-			})
-		} finally {
-			event.target.value = ''
-		}
+		setDataMessage({ type: 'error', text: 'Import currently disabled' })
 	}
 
 	const handleImportButtonClick = () => {
@@ -204,13 +144,19 @@ export default function WorkoutSettingsRoute() {
 				setCount: Math.max(1, Math.round(exercise.setCount)),
 			})),
 		}))
-		const nextConfig: DraftConfig = {
-			...draftConfig,
-			templates: sanitizedTemplates,
-			plates: parsedPlates.length > 0 ? parsedPlates : draftConfig.plates,
-			bonusLabel: draftConfig.bonusLabel.trim(),
-		}
-		helpers.updateConfig(nextConfig)
+
+		const nextPlates = parsedPlates.length > 0 ? parsedPlates : draftConfig.plates;
+		const bonusLabel = draftConfig.bonusLabel.trim();
+
+		fetcher.submit(
+			{
+				intent: 'update-settings',
+				bonusLabel,
+				plates: JSON.stringify(nextPlates),
+				templates: JSON.stringify(sanitizedTemplates),
+			},
+			{ method: 'POST' },
+		)
 		setStatus('saved')
 		setTimeout(() => setStatus('idle'), 2500)
 	}

@@ -1,7 +1,9 @@
 import { Link, NavLink, Outlet } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { ClientOnly } from 'remix-utils/client-only'
-import { DryFireTrackerProvider } from './context.client'
+import { getDb } from '~/db/client.server'
+import { getDryFireData } from './data.server'
+import type { DryFireData } from './data.server'
+import type { Route } from './+types/_layout'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Dry-Fire Trainer' },
@@ -11,13 +13,20 @@ export const meta: MetaFunction = () => [
 	},
 ]
 
+export const loader = async ({ context }: Route.LoaderArgs) => {
+	const db = getDb(context.cloudflare.env);
+	const data = await getDryFireData(db);
+	return { data };
+}
+
 const NAV_ITEMS = [
 	{ to: '/dry-fire-trainer', label: 'Drill' },
 	{ to: '/dry-fire-trainer/history', label: 'History' },
 	{ to: '/dry-fire-trainer/settings', label: 'Settings' },
 ]
 
-export default function DryFireTrainerLayout() {
+export default function DryFireTrainerLayout({ loaderData: { data } }: Route.ComponentProps) {
+
 	return (
 		<main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
 			<header className="space-y-2">
@@ -51,13 +60,7 @@ export default function DryFireTrainerLayout() {
 			</nav>
 
 			<section className="flex-1">
-				<ClientOnly>
-					{() => (
-						<DryFireTrackerProvider>
-							<Outlet />
-						</DryFireTrackerProvider>
-					)}
-				</ClientOnly>
+				<Outlet context={data} />
 			</section>
 		</main>
 	)

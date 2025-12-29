@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useOutletContext, useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from '../context.client'
+import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
+import { upsertWorkout, deleteWorkout, getWorkoutData } from '../data.server'
 import {
 	alignWorkoutWithTemplate,
 	calculatePlateBreakdown,
 	formatDisplayDate,
 	formatWorkoutSummary,
 	getTodayKey,
-} from '../data.client'
+	createWorkoutEntry,
+} from '../utils'
+import type { WorkoutTrackerData, WorkoutEntry, WorkoutExerciseEntry } from '../data.server'
 import { RepsSpinner } from '~/components/reps-spinner'
 
 export const meta: MetaFunction = ({ params }) => {
@@ -22,12 +26,51 @@ export const meta: MetaFunction = ({ params }) => {
 	]
 }
 
-export default function WorkoutDetailRoute() {
-	const params = useParams<{ date?: string }>()
+export const loader = async ({ params, context }: Route.LoaderArgs) => {
+	const date = params.date;
+	if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+		throw new Response('Invalid date', { status: 400 });
+	}
+
+	const db = getDb(context.cloudflare.env);
+	const data = await getWorkoutData(db);
+	const workout = data.workouts[date] ?? createWorkoutEntry(data, date);
+
+	return { workout };
+}
+
+export const action = async ({ request, params, context }: Route.ActionArgs) => {
+	const date = params.date!;
+	const db = getDb(context.cloudflare.env);
+	const formData = await request.formData();
+	const intent = formData.get('intent');
+
+	if (intent === 'upsert-workout') {
+		const payload = JSON.parse(formData.get('workout') as string) as WorkoutEntry;
+		await upsertWorkout(db, payload);
+		return { success: true };
+	}
+
+	if (intent === 'delete-workout') {
+		await deleteWorkout(db, date);
+		return { success: true };
+	}
+
+	return { success: false };
+}
+
+export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkout }, params, matches }: Route.ComponentProps) {
 	const navigate = useNavigate()
+	const fetcher = useFetcher()
 	const date = params.date ?? getTodayKey()
-	const { data, helpers } = useWorkoutTrackerContext()
-	const workout = helpers.getWorkoutByDate(date)
+	const data = matches[1].loaderData.data
+
+	// Use local state for immediate feedback, sync to server
+	const [workout, setWorkout] = useState<WorkoutEntry>(loaderWorkout)
+
+	useEffect(() => {
+		setWorkout(loaderWorkout)
+	}, [loaderWorkout])
 
 	useEffect(() => {
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -62,9 +105,13 @@ export default function WorkoutDetailRoute() {
 		if (!activeTemplate) return
 		const aligned = alignWorkoutWithTemplate(workout, activeTemplate)
 		if (aligned !== workout) {
-			helpers.setWorkout(date, aligned)
+			setWorkout(aligned)
+			fetcher.submit(
+				{ intent: 'upsert-workout', workout: JSON.stringify(aligned) },
+				{ method: 'POST' },
+			)
 		}
-	}, [activeTemplate, helpers, workout, date])
+	}, [activeTemplate, workout, date])
 
 	useEffect(() => {
 		if (!deleteConfirm) return
@@ -85,9 +132,9 @@ export default function WorkoutDetailRoute() {
 	const handleWeightChange = (exerciseId: string, value: string) => {
 		const parsed = value === '' ? null : Number.parseFloat(value)
 		if (Number.isNaN(parsed) && value !== '') return
-		helpers.upsertWorkout(date, (draft) => ({
-			...draft,
-			exercises: draft.exercises.map((exercise) =>
+		const nextWorkout = {
+			...workout,
+			exercises: workout.exercises.map((exercise) =>
 				exercise.id === exerciseId
 					? {
 							...exercise,
@@ -95,7 +142,12 @@ export default function WorkoutDetailRoute() {
 						}
 					: exercise,
 			),
-		}))
+		}
+		setWorkout(nextWorkout)
+		fetcher.submit(
+			{ intent: 'upsert-workout', workout: JSON.stringify(nextWorkout) },
+			{ method: 'POST' },
+		)
 	}
 
 	const handleRepChange = (
@@ -104,9 +156,9 @@ export default function WorkoutDetailRoute() {
 		repValue: number,
 	) => {
 		const nextReps = Math.max(0, repValue)
-		helpers.upsertWorkout(date, (draft) => ({
-			...draft,
-			exercises: draft.exercises.map((exercise) =>
+		const nextWorkout = {
+			...workout,
+			exercises: workout.exercises.map((exercise) =>
 				exercise.id === exerciseId
 					? {
 							...exercise,
@@ -121,16 +173,26 @@ export default function WorkoutDetailRoute() {
 						}
 					: exercise,
 			),
-		}))
+		}
+		setWorkout(nextWorkout)
+		fetcher.submit(
+			{ intent: 'upsert-workout', workout: JSON.stringify(nextWorkout) },
+			{ method: 'POST' },
+		)
 	}
 
 	const handleBonusChange = (value: string) => {
 		const parsed = value === '' ? null : Number.parseInt(value, 10)
 		if (Number.isNaN(parsed) && value !== '') return
-		helpers.upsertWorkout(date, (draft) => ({
-			...draft,
+		const nextWorkout = {
+			...workout,
 			bonusReps: parsed,
-		}))
+		}
+		setWorkout(nextWorkout)
+		fetcher.submit(
+			{ intent: 'upsert-workout', workout: JSON.stringify(nextWorkout) },
+			{ method: 'POST' },
+		)
 	}
 
 	const summary = formatWorkoutSummary(workout, activeTemplate, data.config)
@@ -152,7 +214,7 @@ export default function WorkoutDetailRoute() {
 			setDeleteConfirm(true)
 			return
 		}
-		helpers.deleteWorkout(date)
+		fetcher.submit({ intent: 'delete-workout' }, { method: 'POST' })
 		await navigate('/workout')
 	}
 

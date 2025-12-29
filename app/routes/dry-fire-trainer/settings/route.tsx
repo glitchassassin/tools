@@ -1,16 +1,46 @@
 import { useState } from 'react'
+import { useOutletContext, useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useDryFireTrackerContext } from '../context.client'
-import type { DrillConfig } from '../data.client'
+import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
+import { updateDryFireSettings, upsertDrill, deleteDrill } from '../data.server'
+import type { DrillConfig, DryFireData } from '../data.server'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Settings - Dry-Fire Trainer' },
 ]
 
+export const action = async ({ request, context }: Route.ActionArgs) => {
+	const db = getDb(context.cloudflare.env);
+	const formData = await request.formData();
+	const intent = formData.get('intent');
+
+	if (intent === 'update-settings') {
+		const chaosMode = formData.get('chaosMode') === 'true';
+		await updateDryFireSettings(db, chaosMode);
+		return { success: true };
+	}
+
+	if (intent === 'upsert-drill') {
+		const drill = JSON.parse(formData.get('drill') as string) as DrillConfig;
+		await upsertDrill(db, drill);
+		return { success: true };
+	}
+
+	if (intent === 'delete-drill') {
+		const id = formData.get('id') as string;
+		await deleteDrill(db, id);
+		return { success: true };
+	}
+
+	return { success: false };
+}
+
 type DrillFormData = Omit<DrillConfig, 'id'>
 
-export default function DryFireTrainerSettings() {
-	const { data, helpers } = useDryFireTrackerContext()
+export default function DryFireTrainerSettings({ matches }: Route.ComponentProps) {
+	const data = matches[1].loaderData.data
+	const fetcher = useFetcher()
 	const [editingDrill, setEditingDrill] = useState<DrillConfig | null>(null)
 	const [isAddingDrill, setIsAddingDrill] = useState(false)
 	const [formData, setFormData] = useState<DrillFormData>({
@@ -58,81 +88,38 @@ export default function DryFireTrainerSettings() {
 			return
 		}
 
-		try {
-			if (editingDrill) {
-				helpers.updateDrill(editingDrill.id, formData)
-			} else {
-				helpers.addDrill(formData)
-			}
-			handleCancel()
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to save drill')
+		const drill: DrillConfig = {
+			id: editingDrill?.id ?? `drill-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			...formData,
 		}
+
+		fetcher.submit(
+			{ intent: 'upsert-drill', drill: JSON.stringify(drill) },
+			{ method: 'POST' },
+		)
+		handleCancel()
 	}
 
 	const handleDelete = (drill: DrillConfig) => {
-		if (!helpers.canDeleteDrill(drill.id)) {
+		const hasSessions = data.sessions.some(s => s.drillId === drill.id)
+		if (hasSessions) {
 			setError('Cannot delete drill with existing sessions')
 			return
 		}
 		if (confirm(`Delete "${drill.name}"?`)) {
-			try {
-				helpers.deleteDrill(drill.id)
-			} catch (err) {
-				setError(err instanceof Error ? err.message : 'Failed to delete drill')
-			}
-		}
-	}
-
-	const handleExport = () => {
-		try {
-			const serialized = helpers.exportSerializedData()
-			const blob = new Blob([serialized], { type: 'application/json' })
-			const url = URL.createObjectURL(blob)
-			const a = document.createElement('a')
-			a.href = url
-			a.download = `dry-fire-trainer-${new Date().toISOString().split('T')[0]}.json`
-			document.body.appendChild(a)
-			a.click()
-			document.body.removeChild(a)
-			URL.revokeObjectURL(url)
-			setImportExportError(null)
-		} catch (err) {
-			setImportExportError(
-				err instanceof Error ? err.message : 'Failed to export data',
+			fetcher.submit(
+				{ intent: 'delete-drill', id: drill.id },
+				{ method: 'POST' },
 			)
 		}
 	}
 
-	const handleImport = () => {
-		const input = document.createElement('input')
-		input.type = 'file'
-		input.accept = 'application/json'
-		input.onchange = (e) => {
-			const file = (e.target as HTMLInputElement).files?.[0]
-			if (!file) return
+	const handleExport = () => {
+		setImportExportError('Export is not yet supported in the database-backed version.')
+	}
 
-			const reader = new FileReader()
-			reader.onload = (event) => {
-				try {
-					const content = event.target?.result as string
-					if (
-						confirm(
-							'Importing will overwrite all existing drills and sessions. Continue?',
-						)
-					) {
-						helpers.importSerializedData(content)
-						setImportExportError(null)
-					}
-				} catch (err) {
-					setImportExportError(
-						err instanceof Error ? err.message : 'Failed to import data',
-					)
-				}
-			}
-			reader.readAsText(file)
-		}
-		input.click()
+	const handleImport = () => {
+		setImportExportError('Import is not yet supported in the database-backed version.')
 	}
 
 	return (
@@ -156,7 +143,7 @@ export default function DryFireTrainerSettings() {
 						</div>
 						<button
 							type="button"
-							onClick={() => helpers.setChaosMode(!data.chaosMode)}
+							onClick={() => fetcher.submit({ intent: 'update-settings', chaosMode: String(!data.chaosMode) }, { method: 'POST' })}
 							className={`focus:ring-primary relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
 								data.chaosMode ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'
 							}`}
@@ -322,12 +309,12 @@ export default function DryFireTrainerSettings() {
 									onClick={() => handleDelete(drill)}
 									className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
 									disabled={
-										!helpers.canDeleteDrill(drill.id) ||
+										data.sessions.some(s => s.drillId === drill.id) ||
 										isAddingDrill ||
 										editingDrill !== null
 									}
 									title={
-										!helpers.canDeleteDrill(drill.id)
+										data.sessions.some(s => s.drillId === drill.id)
 											? 'Cannot delete drill with existing sessions'
 											: 'Delete drill'
 									}

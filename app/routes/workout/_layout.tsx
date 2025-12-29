@@ -1,7 +1,8 @@
 import { Link, NavLink, Outlet } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { ClientOnly } from 'remix-utils/client-only'
-import { WorkoutTrackerProvider } from './context.client'
+import type { Route } from './+types/_layout'
+import { getDb } from '~/db/client.server'
+import { getWorkoutData } from './data.server'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Workout Tracker' },
@@ -11,13 +12,20 @@ export const meta: MetaFunction = () => [
 	},
 ]
 
+export const loader = async ({ context }: Route.LoaderArgs) => {
+	const db = getDb(context.cloudflare.env);
+	const data = await getWorkoutData(db);
+	return { data };
+}
+
 const NAV_ITEMS = [
 	{ to: '/workout', label: 'Workout' },
 	{ to: '/workout/history', label: 'History' },
 	{ to: '/workout/settings', label: 'Settings' },
 ]
 
-export default function WorkoutLayout() {
+export default function WorkoutLayout({ loaderData: { data } }: Route.ComponentProps) {
+
 	return (
 		<main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
 			<header className="space-y-2">
@@ -51,13 +59,7 @@ export default function WorkoutLayout() {
 			</nav>
 
 			<section className="flex-1">
-				<ClientOnly>
-					{() => (
-						<WorkoutTrackerProvider>
-							<Outlet />
-						</WorkoutTrackerProvider>
-					)}
-				</ClientOnly>
+				<Outlet context={data} />
 			</section>
 		</main>
 	)
