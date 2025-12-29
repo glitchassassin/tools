@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useOutletContext, useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import type { Route } from './+types/route'
+import { useFetcher } from 'react-router'
 import { getDb } from '~/db/client.server'
-import { updateDryFireSettings, upsertDrill, deleteDrill } from '../data.server'
-import type { DrillConfig, DryFireData } from '../data.server'
+import type { DrillConfig } from '../data.server'
+import { deleteDrill, updateDryFireSettings, upsertDrill } from '../data.server'
+import type { Route } from './+types/route'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Settings - Dry-Fire Trainer' },
@@ -93,7 +93,7 @@ export default function DryFireTrainerSettings({ matches }: Route.ComponentProps
 			...formData,
 		}
 
-		fetcher.submit(
+		void fetcher.submit(
 			{ intent: 'upsert-drill', drill: JSON.stringify(drill) },
 			{ method: 'POST' },
 		)
@@ -107,7 +107,7 @@ export default function DryFireTrainerSettings({ matches }: Route.ComponentProps
 			return
 		}
 		if (confirm(`Delete "${drill.name}"?`)) {
-			fetcher.submit(
+			void fetcher.submit(
 				{ intent: 'delete-drill', id: drill.id },
 				{ method: 'POST' },
 			)
@@ -143,7 +143,7 @@ export default function DryFireTrainerSettings({ matches }: Route.ComponentProps
 						</div>
 						<button
 							type="button"
-							onClick={() => fetcher.submit({ intent: 'update-settings', chaosMode: String(!data.chaosMode) }, { method: 'POST' })}
+							onClick={() => void fetcher.submit({ intent: 'update-settings', chaosMode: String(!data.chaosMode) }, { method: 'POST' })}
 							className={`focus:ring-primary relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
 								data.chaosMode ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'
 							}`}

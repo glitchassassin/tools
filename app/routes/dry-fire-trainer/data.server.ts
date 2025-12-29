@@ -1,7 +1,7 @@
-import { z } from 'zod'
 import { eq } from 'drizzle-orm'
-import { dryFireSettings, dryFireDrills, dryFireSessions } from '~/db/schema'
+import { z } from 'zod'
 import type { Db } from '~/db/client.server'
+import { dryFireSettings, dryFireDrills, dryFireSessions } from '~/db/schema'
 
 export const DrillConfigSchema = z.object({
 	id: z.string(),

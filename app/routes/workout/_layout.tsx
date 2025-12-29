@@ -1,8 +1,8 @@
 import { Link, NavLink, Outlet } from 'react-router'
 import type { MetaFunction } from 'react-router'
 import type { Route } from './+types/_layout'
-import { getDb } from '~/db/client.server'
 import { getWorkoutData } from './data.server'
+import { getDb } from '~/db/client.server'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Workout Tracker' },

@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState, useId, useRef } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { useNavigate, useOutletContext, useFetcher } from 'react-router'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { MetaFunction } from 'react-router'
-import type { Route } from './+types/route'
+import { useFetcher } from 'react-router'
 import { getDb } from '~/db/client.server'
-import { updateWorkoutSettings, upsertWorkoutTemplate } from '../data.server'
 import type {
-	WorkoutExerciseConfig,
-	WorkoutTrackerData,
-	WorkoutTemplate,
+    WorkoutExerciseConfig,
+    WorkoutTemplate,
+    WorkoutTrackerData,
 } from '../data.server'
+import { updateWorkoutSettings, upsertWorkoutTemplate } from '../data.server'
+import type { Route } from './+types/route'
 
 export const meta: MetaFunction = () => [{ title: 'Workout Settings' }]
 
@@ -148,7 +148,7 @@ export default function WorkoutSettingsRoute({ matches }: Route.ComponentProps) 
 		const nextPlates = parsedPlates.length > 0 ? parsedPlates : draftConfig.plates;
 		const bonusLabel = draftConfig.bonusLabel.trim();
 
-		fetcher.submit(
+		void fetcher.submit(
 			{
 				intent: 'update-settings',
 				bonusLabel,

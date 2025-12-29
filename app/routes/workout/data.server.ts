@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { type Db } from '~/db/client.server';
-import { workoutSettings, workoutTemplates, workoutEntries } from '~/db/schema';
 import { z } from 'zod';
+import type {Db} from '~/db/client.server';
+import { workoutSettings, workoutTemplates, workoutEntries } from '~/db/schema';
 
 export const WorkoutExerciseConfigSchema = z.object({
 	id: z.string(),

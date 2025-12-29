@@ -12,20 +12,16 @@ import type { ChartData, ChartOptions, TooltipItem } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
-import { Link, useNavigate, useOutletContext } from 'react-router'
+import { Link } from 'react-router'
 import type { MetaFunction } from 'react-router'
+
+
 import {
 	formatDisplayDate,
 	parseDateKey,
 	toDateKey,
 	summarizeSets,
 } from '../utils'
-import type {
-	WorkoutTrackerData,
-	WorkoutEntry,
-	WorkoutTemplate,
-	WorkoutExerciseEntry,
-} from '../data.server'
 
 import type { Route } from './+types/route'
 

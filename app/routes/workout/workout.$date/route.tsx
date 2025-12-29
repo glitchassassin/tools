@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useOutletContext, useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import type { Route } from './+types/route'
+import { useFetcher, useNavigate } from 'react-router'
+import { RepsSpinner } from '~/components/reps-spinner'
 import { getDb } from '~/db/client.server'
-import { upsertWorkout, deleteWorkout, getWorkoutData } from '../data.server'
+import type { WorkoutEntry } from '../data.server'
+import { deleteWorkout, getWorkoutData, upsertWorkout } from '../data.server'
 import {
 	alignWorkoutWithTemplate,
 	calculatePlateBreakdown,
+	createWorkoutEntry,
 	formatDisplayDate,
 	formatWorkoutSummary,
 	getTodayKey,
-	createWorkoutEntry,
 } from '../utils'
-import type { WorkoutTrackerData, WorkoutEntry, WorkoutExerciseEntry } from '../data.server'
-import { RepsSpinner } from '~/components/reps-spinner'
+import type { Route } from './+types/route'
 
 export const meta: MetaFunction = ({ params }) => {
 	const date = (params?.date as string | undefined) ?? getTodayKey()
@@ -106,7 +106,7 @@ export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkou
 		const aligned = alignWorkoutWithTemplate(workout, activeTemplate)
 		if (aligned !== workout) {
 			setWorkout(aligned)
-			fetcher.submit(
+			void fetcher.submit(
 				{ intent: 'upsert-workout', workout: JSON.stringify(aligned) },
 				{ method: 'POST' },
 			)
@@ -144,7 +144,7 @@ export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkou
 			),
 		}
 		setWorkout(nextWorkout)
-		fetcher.submit(
+		void fetcher.submit(
 			{ intent: 'upsert-workout', workout: JSON.stringify(nextWorkout) },
 			{ method: 'POST' },
 		)
@@ -175,7 +175,7 @@ export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkou
 			),
 		}
 		setWorkout(nextWorkout)
-		fetcher.submit(
+		void fetcher.submit(
 			{ intent: 'upsert-workout', workout: JSON.stringify(nextWorkout) },
 			{ method: 'POST' },
 		)
@@ -189,7 +189,7 @@ export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkou
 			bonusReps: parsed,
 		}
 		setWorkout(nextWorkout)
-		fetcher.submit(
+		void fetcher.submit(
 			{ intent: 'upsert-workout', workout: JSON.stringify(nextWorkout) },
 			{ method: 'POST' },
 		)
@@ -214,7 +214,7 @@ export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkou
 			setDeleteConfirm(true)
 			return
 		}
-		fetcher.submit({ intent: 'delete-workout' }, { method: 'POST' })
+		void fetcher.submit({ intent: 'delete-workout' }, { method: 'POST' })
 		await navigate('/workout')
 	}
 

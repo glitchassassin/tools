@@ -4,6 +4,7 @@
 		"vite.config.ts",
 		"react-router.config.ts",
 		"playwright.config.ts",
+		"drizzle.config.ts",
 		"tests/**/*"
 	],
 	"compilerOptions": {
