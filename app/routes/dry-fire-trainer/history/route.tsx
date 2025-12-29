@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import type { Route } from './+types/route'
+import { useFetcher } from 'react-router'
 import { getDb } from '~/db/client.server'
-import { deleteSession } from '../data.server'
-import { calculateSessionStats, formatSessionDate } from '../utils'
 import type { Session } from '../data.server'
+import { deleteSession } from '../data.server'
 import { ShotResultsChart } from '../shot-results-chart'
+import { calculateSessionStats, formatSessionDate } from '../utils'
+import type { Route } from './+types/route'
 
 export const meta: MetaFunction = () => [
 	{ title: 'History - Dry-Fire Trainer' },
@@ -37,7 +37,7 @@ export default function DryFireTrainerHistory({ matches }: Route.ComponentProps)
 
 	const handleDelete = (session: Session) => {
 		if (confirm(`Delete session from ${formatSessionDate(session.date)}?`)) {
-			fetcher.submit(
+			void fetcher.submit(
 				{ intent: 'delete-session', sessionId: session.id },
 				{ method: 'POST' },
 			)

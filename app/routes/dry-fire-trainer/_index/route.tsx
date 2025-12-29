@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { useNavigate, useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import type { Route } from './+types/route'
+import { useFetcher, useNavigate } from 'react-router'
 import { getDb } from '~/db/client.server'
 import { createSession } from '../data.server'
+import type { Route } from './+types/route'
 
 export const meta: MetaFunction = () => [{ title: 'Dry Fire Trainer' }]
 
@@ -27,7 +27,7 @@ export default function DryFireTrainerHome({ matches }: Route.ComponentProps) {
 	const data = matches[1].loaderData.data
 
 	const handleStartDrill = (drillId: string) => {
-		fetcher.submit({ intent: 'create-session', drillId }, { method: 'POST' })
+		void fetcher.submit({ intent: 'create-session', drillId }, { method: 'POST' })
 	}
 
 	// Navigate when session is created

@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import type { Route } from './+types/route'
 import {
 	formatDisplayDate,
 	getMaxWeightByExercise,
 	getTodayKey,
 } from '../utils'
+import type { Route } from './+types/route'
 
 export const meta: MetaFunction = () => [{ title: 'Workout Tracker' }]
 

@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { useNavigate, useFetcher } from 'react-router'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { MetaFunction } from 'react-router'
+import { useFetcher, useNavigate } from 'react-router'
+import type { Session, Shot } from '../data.server'
+import { getDryFireData, upsertSession } from '../data.server'
+import { ShotResultsChart } from '../shot-results-chart'
 import type { Route } from './+types/route'
 import { getDb } from '~/db/client.server'
-import { upsertSession, getDryFireData } from '../data.server'
-import type { Session, Shot } from '../data.server'
-import { ShotResultsChart } from '../shot-results-chart'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Drill Session - Dry-Fire Trainer' },
@@ -142,7 +142,7 @@ class AudioSystem {
 }
 
 export default function DrillSession({ loaderData: { session: loaderSession, dryFireData: data }, params }: Route.ComponentProps) {
-	const { sessionId } = params
+	// const { sessionId } = params
 	const navigate = useNavigate()
 	const fetcher = useFetcher()
 	
@@ -254,7 +254,7 @@ export default function DrillSession({ loaderData: { session: loaderSession, dry
 			}
 
 			setSession(updatedSession)
-			fetcher.submit(
+			void fetcher.submit(
 				{ intent: 'update-session', session: JSON.stringify(updatedSession) },
 				{ method: 'POST' },
 			)
