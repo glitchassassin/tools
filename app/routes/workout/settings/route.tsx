@@ -1,12 +1,12 @@
-import type { ChangeEvent, FormEvent } from 'react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import type { FormEvent } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import type { MetaFunction } from 'react-router'
 import { useFetcher } from 'react-router'
 import { getDb } from '~/db/client.server'
 import type {
-    WorkoutExerciseConfig,
-    WorkoutTemplate,
-    WorkoutTrackerData,
+	WorkoutExerciseConfig,
+	WorkoutTemplate,
+	WorkoutTrackerData,
 } from '../data.server'
 import { updateWorkoutSettings, upsertWorkoutTemplate } from '../data.server'
 import type { Route } from './+types/route'
@@ -41,13 +41,7 @@ export default function WorkoutSettingsRoute({ matches }: Route.ComponentProps) 
 	const [draftConfig, setDraftConfig] = useState<DraftConfig>(data.config)
 	const [platesInput, setPlatesInput] = useState(data.config.plates.join(', '))
 	const [status, setStatus] = useState<'idle' | 'saved'>('idle')
-	const [dataMessage, setDataMessage] = useState<{
-		type: 'success' | 'error'
-		text: string
-	} | null>(null)
-	const platesFieldLabelId = useId()
-	const platesFieldDescriptionId = useId()
-	const fileInputRef = useRef<HTMLInputElement | null>(null)
+
 
 	useEffect(() => {
 		setDraftConfig(data.config)
@@ -113,17 +107,9 @@ export default function WorkoutSettingsRoute({ matches }: Route.ComponentProps) 
 		}))
 	}
 
-	const handleExportData = () => {
-		setDataMessage({ type: 'error', text: 'Export currently disabled' })
-	}
+	const platesFieldLabelId = useId()
+	const platesFieldDescriptionId = useId()
 
-	const handleImportData = async (event: ChangeEvent<HTMLInputElement>) => {
-		setDataMessage({ type: 'error', text: 'Import currently disabled' })
-	}
-
-	const handleImportButtonClick = () => {
-		fileInputRef.current?.click()
-	}
 
 	const parsedPlates = useMemo(() => {
 		return platesInput
@@ -171,45 +157,6 @@ export default function WorkoutSettingsRoute({ matches }: Route.ComponentProps) 
 				</p>
 			</header>
 
-			<section className="border-app-border bg-app-surface/80 space-y-3 rounded-3xl border p-5">
-				<h3 className="text-lg font-semibold">Import or export data</h3>
-				<p className="text-app-muted text-sm">
-					Download a backup of your workouts or restore data from a previous
-					export.
-				</p>
-				<div className="flex flex-col gap-3 sm:flex-row">
-					<button
-						type="button"
-						onClick={handleExportData}
-						className="bg-app-surface border-app-border text-primary hover:text-primary focus-visible:outline-primary/70 flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-offset-4 active:scale-[0.99]"
-					>
-						Export data
-					</button>
-					<button
-						type="button"
-						onClick={handleImportButtonClick}
-						className="bg-app-surface border-app-border text-primary hover:text-primary focus-visible:outline-primary/70 flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition hover:scale-[1.01] focus-visible:outline focus-visible:outline-offset-4 active:scale-[0.99]"
-					>
-						Import data
-					</button>
-					<input
-						ref={fileInputRef}
-						type="file"
-						accept="application/json"
-						onChange={handleImportData}
-						className="sr-only"
-						aria-label="Import workout data file"
-					/>
-				</div>
-				{dataMessage && (
-					<p
-						role={dataMessage.type === 'error' ? 'alert' : 'status'}
-						className={`text-sm ${dataMessage.type === 'error' ? 'text-red-500' : 'text-app-muted'}`}
-					>
-						{dataMessage.text}
-					</p>
-				)}
-			</section>
 
 			<form onSubmit={handleSubmit} className="space-y-6">
 				{draftConfig.templates.map((template, templateIndex) => (

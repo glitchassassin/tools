@@ -1,7 +1,6 @@
-import { readFile } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
+import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
-import type { Download, Locator, Page } from '@playwright/test'
 
 type ClipboardAPI = {
 	writeText?: (text: string) => Promise<void>
@@ -51,21 +50,7 @@ function serializeModelData<T>(data: T) {
 	return JSON.stringify({ version: 0, data })
 }
 
-async function readDownload(download: Download) {
-	const stream = await download.createReadStream()
-	if (stream) {
-		let result = ''
-		for await (const chunk of stream) {
-			result += chunk.toString()
-		}
-		return result
-	}
-	const filePath = await download.path()
-	if (!filePath) {
-		throw new Error('Unable to read download contents')
-	}
-	return readFile(filePath, 'utf-8')
-}
+
 
 const DEFAULT_TEST_CONFIG = {
 	templates: [
@@ -104,30 +89,9 @@ const DEFAULT_TEST_CONFIG = {
 	plates: number[]
 }
 
-async function importWorkoutData(
-	page: Page,
-	config: unknown,
-	workouts: unknown,
-) {
-	const payload = {
-		config: serializeModelData(config),
-		workouts: serializeModelData(workouts),
-	}
-	const fileBuffer = Buffer.from(JSON.stringify(payload, null, 2), 'utf-8')
 
-	await page.getByLabel('Import workout data file').setInputFiles({
-		name: 'workout-data.json',
-		mimeType: 'application/json',
-		buffer: fileBuffer,
-	})
 
-	await expect(page.getByText('Data imported successfully.')).toBeVisible()
-}
 
-test.beforeEach(async ({ page }) => {
-	await page.goto('/workout/settings')
-	await importWorkoutData(page, DEFAULT_TEST_CONFIG, {})
-})
 
 function exerciseToggle(page: Page, exerciseName: string): Locator {
 	const pattern = escapeForRegex(exerciseName)
@@ -568,192 +532,5 @@ test.describe('Workout Tracker – Settings Route', () => {
 		).toContainText('25 + 5 + 1.25')
 	})
 
-	test('Export data downloads stored strings', async ({ page }) => {
-		await page.setViewportSize({ width: 430, height: 932 })
 
-		const workoutDate = '2025-07-12'
-		await page.goto(`/workout/workout/${workoutDate}`)
-
-		await runAxe(page)
-
-		await setExerciseWeight(page, 'Squat', '205')
-		await setExerciseReps(page, 'Squat', [5, 5, 5, 5, 5])
-
-		await page.goto('/workout/settings')
-		await runAxe(page)
-
-		const downloadPromise = page.waitForEvent('download')
-		await page.getByRole('button', { name: 'Export data' }).click()
-		const download = await downloadPromise
-		await expect(download.suggestedFilename()).toMatch(
-			/workout-tracker-data-.*\.json/,
-		)
-
-		const fileContents = await readDownload(download)
-		const snapshot = JSON.parse(fileContents) as {
-			config: string
-			workouts: string
-		}
-
-		const configSnapshot = JSON.parse(snapshot.config) as {
-			data: typeof DEFAULT_TEST_CONFIG
-		}
-		expect(configSnapshot.data).toEqual(DEFAULT_TEST_CONFIG)
-
-		const workoutsSnapshot = JSON.parse(snapshot.workouts) as {
-			data: Record<
-				string,
-				{
-					templateId: string
-					exercises: Array<{
-						id: string
-						weight: number | null
-						sets: Array<{ reps: number }>
-					}>
-				}
-			>
-		}
-		const exportedWorkout = workoutsSnapshot.data[workoutDate]
-		expect(exportedWorkout).toBeDefined()
-		expect(exportedWorkout?.templateId).toBe('workout-a')
-		const squatEntry = exportedWorkout?.exercises.find(
-			(exercise) => exercise.id === 'squat',
-		)
-		expect(squatEntry?.weight).toBe(205)
-
-		await expect(
-			page.getByText('Data exported. Download started.'),
-		).toBeVisible()
-	})
-
-	test('Import data updates settings and workouts', async ({ page }) => {
-		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/workout/settings')
-		await runAxe(page)
-
-		const importConfig = {
-			templates: [
-				{
-					id: 'body-comp',
-					name: 'Body Composition',
-					exercises: [
-						{ id: 'romanian-deadlift', name: 'Romanian Deadlift', setCount: 3 },
-						{ id: 'incline-press', name: 'Incline Press', setCount: 4 },
-					],
-				},
-				{
-					id: 'stability-day',
-					name: 'Stability Day',
-					exercises: [
-						{ id: 'single-leg-squat', name: 'Single-leg Squat', setCount: 3 },
-					],
-				},
-			],
-			bonusLabel: 'Farmer Carries',
-			plates: [35, 25, 10, 5],
-		}
-		const importWorkouts = {
-			'2025-06-10': {
-				date: '2025-06-10',
-				templateId: 'body-comp',
-				exercises: [
-					{
-						id: 'romanian-deadlift',
-						weight: 205,
-						sets: [{ reps: 10 }, { reps: 10 }, { reps: 10 }],
-					},
-					{
-						id: 'incline-press',
-						weight: 155,
-						sets: [{ reps: 8 }, { reps: 8 }, { reps: 8 }, { reps: 8 }],
-					},
-				],
-				bonusReps: 6,
-			},
-		}
-		const payload = {
-			config: serializeModelData(importConfig),
-			workouts: serializeModelData(importWorkouts),
-		}
-		const fileBuffer = Buffer.from(JSON.stringify(payload, null, 2), 'utf-8')
-
-		await page.getByLabel('Import workout data file').setInputFiles({
-			name: 'import.json',
-			mimeType: 'application/json',
-			buffer: fileBuffer,
-		})
-
-		await expect(page.getByText('Data imported successfully.')).toBeVisible()
-
-		const templateNameField = page.getByLabel('Name for template 1')
-		await expect(templateNameField).toHaveValue(importConfig.templates[0]!.name)
-
-		const firstExerciseField = page.getByLabel('Exercise name').first()
-		await expect(firstExerciseField).toHaveValue(
-			importConfig.templates[0]!.exercises[0]!.name,
-		)
-
-		const platesField = page.getByRole('textbox', {
-			name: 'Plate denominations',
-		})
-		await expect(platesField).toHaveValue(importConfig.plates.join(', '))
-
-		await page.goto('/workout/workout/2025-06-10')
-
-		const romanianSection = await exerciseSection(
-			page,
-			importConfig.templates[0]!.exercises[0]!.name,
-		)
-		await expect(romanianSection.getByLabel('Weight (lb)')).toHaveValue(
-			String(importWorkouts['2025-06-10']!.exercises[0]!.weight),
-		)
-
-		const repsInputs = romanianSection.getByRole('spinbutton', {
-			name: /reps for set/i,
-		})
-		await expect(repsInputs).toHaveCount(3)
-	})
-
-	test('Import rejects malformed JSON files', async ({ page }) => {
-		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/workout/settings')
-
-		const invalidBuffer = Buffer.from('{', 'utf-8')
-		await page.getByLabel('Import workout data file').setInputFiles({
-			name: 'broken.json',
-			mimeType: 'application/json',
-			buffer: invalidBuffer,
-		})
-
-		await expect(
-			page.getByText('Import failed: file does not contain valid JSON.'),
-		).toBeVisible()
-
-		const templateNameField = page.getByLabel('Name for template 1')
-		await expect(templateNameField).toHaveValue('Workout A')
-	})
-
-	test('Import rejects files missing required keys', async ({ page }) => {
-		await page.setViewportSize({ width: 430, height: 932 })
-		await page.goto('/workout/settings')
-
-		const missingKeys = Buffer.from(
-			JSON.stringify({ config: '{}' }, null, 2),
-			'utf-8',
-		)
-		await page.getByLabel('Import workout data file').setInputFiles({
-			name: 'missing-keys.json',
-			mimeType: 'application/json',
-			buffer: missingKeys,
-		})
-
-		await expect(
-			page.getByText(
-				'Import failed: file must include config and workouts strings.',
-			),
-		).toBeVisible()
-
-		const templateNameField = page.getByLabel('Name for template 1')
-		await expect(templateNameField).toHaveValue('Workout A')
-	})
 })

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 // Fixture to create a drill with randomized name and 1 rep
 async function createTestDrill(page: any): Promise<string> {
@@ -255,30 +255,6 @@ test.describe('Dry-Fire Trainer', () => {
 		).toBeVisible()
 	})
 
-	test('should export and import data', async ({ page }) => {
-		await page.getByRole('link', { name: 'Settings' }).click()
-
-		// Add a custom drill first
-		await page.getByRole('button', { name: 'Add Drill' }).click()
-		await page.getByLabel('Name').fill('Export Test Drill')
-		await page.getByLabel('Par Time (seconds)').fill('3.0')
-		await page.getByRole('button', { name: 'Save' }).click()
-
-		// Export data
-		const downloadPromise = page.waitForEvent('download')
-		await page.getByRole('button', { name: 'Export Data' }).click()
-		const download = await downloadPromise
-
-		// Verify file was downloaded
-		expect(download.suggestedFilename()).toMatch(/dry-fire-trainer-.*\.json/)
-
-		// For import test, we'd need to create a file upload scenario
-		// This is complex in Playwright without actual file system access
-		// So we verify the import button exists
-		await expect(
-			page.getByRole('button', { name: 'Import Data' }),
-		).toBeVisible()
-	})
 
 	test('should have proper accessibility', async ({ page }) => {
 		// Check drill selection page
