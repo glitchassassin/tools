@@ -39,8 +39,7 @@ detection.
 
 ### Data Management
 
-- Import/Export JSON data
-- All data stored locally in browser localStorage
+- All data is centralized in the database
 - Uses versioned data models for future migrations
 
 ## Architecture
@@ -63,7 +62,7 @@ detection.
 - `_index/route.tsx` - Drill selection screen
 - `session.$sessionId/route.tsx` - Active drill execution
 - `history/route.tsx` - Past sessions list and details
-- `settings/route.tsx` - Drill CRUD and import/export
+- `settings/route.tsx` - Drill CRUD and configuration
 
 ### Audio System
 
@@ -119,12 +118,6 @@ detection.
 3. Click "Edit" to modify existing drill
 4. Click "Delete" to remove drill (if no sessions exist)
 
-### Importing/Exporting Data
-
-1. Navigate to Settings tab
-2. Click "Export Data" to download JSON file
-3. Click "Import Data" to upload JSON file
-4. Warning: Import overwrites existing data
 
 ## Technical Details
 
@@ -171,7 +164,6 @@ detection.
 
 - Requires modern browser with Web Audio API support
 - Requires MediaStream API for microphone access
-- localStorage required for data persistence
 - Tested on latest Chrome, Firefox, Safari, Edge
 
 ## Testing
@@ -187,7 +179,6 @@ Tests cover:
 - Auto-advance to next rep
 - Ignore time functionality
 - History viewing and deletion
-- Import/Export
 - Accessibility (Axe)
 - Keyboard navigation
 

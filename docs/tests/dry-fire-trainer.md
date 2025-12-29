@@ -163,40 +163,7 @@
 2. Verify error message: "Cannot delete drill with existing sessions"
 3. Drill remains in list
 
-## Test Scenario 6: Import/Export Functionality
-
-### Export Data
-
-1. Navigate to Settings tab
-2. Click "Export Data" button
-3. Verify JSON file downloads/copies to clipboard
-4. Verify JSON contains drills and sessions
-
-### Import Data - Valid
-
-1. Navigate to Settings tab
-2. Click "Import Data" button
-3. Provide valid JSON data
-4. Verify confirmation message
-5. Verify drills and sessions are loaded
-6. Navigate to History to confirm sessions imported
-
-### Import Data - Invalid
-
-1. Click "Import Data" button
-2. Provide invalid JSON or incorrect structure
-3. Verify clear error message
-4. Verify existing data is not corrupted
-
-### Import Overwrites Data
-
-1. Have existing drills and sessions
-2. Import data
-3. Verify warning that existing data will be overwritten
-4. Confirm import
-5. Verify new data replaces old data
-
-## Test Scenario 7: Microphone Permission Handling
+## Test Scenario 6: Microphone Permission Handling
 
 ### First Time Permission Request
 
@@ -225,7 +192,8 @@
 2. Verify appropriate message
 3. Verify drill can run in manual mode (no shot detection)
 
-## Test Scenario 8: Accessibility
+
+## Test Scenario 7: Accessibility
 
 ### Keyboard Navigation
 
@@ -255,7 +223,8 @@
 3. After completing drill, focus moves to main action button
 4. Modal dialogs trap focus appropriately
 
-## Test Scenario 9: Edge Cases
+
+## Test Scenario 8: Edge Cases
 
 ### Rapid Shot Detection
 

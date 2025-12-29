@@ -49,9 +49,7 @@ export default function DryFireTrainerSettings({ matches }: Route.ComponentProps
 		reps: 20,
 	})
 	const [error, setError] = useState<string | null>(null)
-	const [importExportError, setImportExportError] = useState<string | null>(
-		null,
-	)
+
 
 	const handleStartAdd = () => {
 		setIsAddingDrill(true)
@@ -114,13 +112,7 @@ export default function DryFireTrainerSettings({ matches }: Route.ComponentProps
 		}
 	}
 
-	const handleExport = () => {
-		setImportExportError('Export is not yet supported in the database-backed version.')
-	}
 
-	const handleImport = () => {
-		setImportExportError('Import is not yet supported in the database-backed version.')
-	}
 
 	return (
 		<div className="space-y-8">
@@ -327,37 +319,6 @@ export default function DryFireTrainerSettings({ matches }: Route.ComponentProps
 				</ul>
 			</section>
 
-			<section className="space-y-4">
-				<header>
-					<h2 className="text-xl font-semibold">Data Management</h2>
-					<p className="text-app-muted mt-1 text-sm">
-						Import or export your drills and sessions
-					</p>
-				</header>
-
-				{importExportError && (
-					<div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-						{importExportError}
-					</div>
-				)}
-
-				<div className="flex gap-3">
-					<button
-						type="button"
-						onClick={handleExport}
-						className="border-app-border hover:bg-app-surface/50 flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition"
-					>
-						Export Data
-					</button>
-					<button
-						type="button"
-						onClick={handleImport}
-						className="border-app-border hover:bg-app-surface/50 flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition"
-					>
-						Import Data
-					</button>
-				</div>
-			</section>
 		</div>
 	)
 }
