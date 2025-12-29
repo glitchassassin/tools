@@ -12,15 +12,22 @@ import type { ChartData, ChartOptions, TooltipItem } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
-import { Link } from 'react-router'
+import { Link, useNavigate, useOutletContext } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from '../context.client'
 import {
 	formatDisplayDate,
 	parseDateKey,
 	toDateKey,
 	summarizeSets,
-} from '../data.client'
+} from '../utils'
+import type {
+	WorkoutTrackerData,
+	WorkoutEntry,
+	WorkoutTemplate,
+	WorkoutExerciseEntry,
+} from '../data.server'
+
+import type { Route } from './+types/route'
 
 ChartJS.register(
 	CategoryScale,
@@ -51,8 +58,8 @@ const palette = [
 	'#ffd54f',
 ]
 
-export default function WorkoutHistoryRoute() {
-	const { data } = useWorkoutTrackerContext()
+export default function WorkoutHistoryRoute({ matches }: Route.ComponentProps) {
+	const data = matches[1].loaderData.data
 
 	const workouts = useMemo(
 		() =>

@@ -20,7 +20,10 @@
     "test:e2e": "playwright test --reporter line",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "typecheck": "npm run cf-typegen && react-router typegen && tsc -b"
+    "typecheck": "npm run cf-typegen && react-router typegen && tsc -b",
+    "db:makemigrations": "npx drizzle-kit generate",
+    "db:migrate": "npx wrangler d1 migrations apply tools-db --local",
+    "db:migrate:remote": "npx wrangler d1 migrations apply tools-db"
   },
   "dependencies": {
     "@epic-web/config": "^1.21.0",
@@ -29,6 +32,7 @@
     "chart.js": "^4.5.0",
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.1",
     "isbot": "^5.1.27",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.0",
@@ -43,9 +47,12 @@
     "@playwright/test": "^1.55.1",
     "@react-router/dev": "^7.9.4",
     "@tailwindcss/vite": "^4.1.4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "better-sqlite3": "^12.5.0",
+    "drizzle-kit": "^0.31.8",
     "eslint": "^9.37.0",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.12",

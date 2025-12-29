@@ -1,13 +1,39 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useDryFireTrackerContext } from '../context.client'
-import type { Session, Shot } from '../data.client'
+import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
+import { upsertSession, getDryFireData } from '../data.server'
+import type { Session, Shot } from '../data.server'
 import { ShotResultsChart } from '../shot-results-chart'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Drill Session - Dry-Fire Trainer' },
 ]
+
+export const loader = async ({ params, context }: Route.LoaderArgs) => {
+	const db = getDb(context.cloudflare.env);
+	const data = await getDryFireData(db);
+	const session = data.sessions.find(s => s.id === params.sessionId);
+	if (!session) {
+		throw new Response('Session not found', { status: 404 });
+	}
+	return { session, dryFireData: data };
+}
+
+export const action = async ({ request, context }: Route.ActionArgs) => {
+	const db = getDb(context.cloudflare.env);
+	const formData = await request.formData();
+	const intent = formData.get('intent');
+
+	if (intent === 'update-session') {
+		const session = JSON.parse(formData.get('session') as string) as Session;
+		await upsertSession(db, session);
+		return { success: true };
+	}
+
+	return { success: false };
+}
 
 type RepState = 'ready' | 'waiting-to-start' | 'waiting-for-result' | 'complete'
 
@@ -115,33 +141,23 @@ class AudioSystem {
 	}
 }
 
-export default function DrillSession() {
-	const { sessionId } = useParams()
+export default function DrillSession({ loaderData: { session: loaderSession, dryFireData: data }, params }: Route.ComponentProps) {
+	const { sessionId } = params
 	const navigate = useNavigate()
-	const { data, helpers } = useDryFireTrackerContext()
-	const [session, setSession] = useState<Session | null>(null)
+	const fetcher = useFetcher()
+	
+	const [session, setSession] = useState<Session>(loaderSession)
 	const [currentRep, setCurrentRep] = useState(0)
 	const [repState, setRepState] = useState<RepState>('ready')
 
 	const audioSystemRef = useRef<AudioSystem | null>(null)
-	const delayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-	const parTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-	const chaosTimeoutsRef = useRef<NodeJS.Timeout[]>([])
+	const delayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const parTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const chaosTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
 	useEffect(() => {
-		if (!sessionId) {
-			void navigate('/dry-fire-trainer')
-			return
-		}
-
-		const foundSession = helpers.getSession(sessionId)
-		if (!foundSession) {
-			void navigate('/dry-fire-trainer')
-			return
-		}
-
-		setSession(foundSession)
-	}, [sessionId, navigate, helpers])
+		setSession(loaderSession)
+	}, [loaderSession])
 
 	useEffect(() => {
 		// Initialize audio system
@@ -231,17 +247,19 @@ export default function DrillSession() {
 				result,
 			}
 
-			const updatedSession = {
+			const updatedSession: Session = {
 				...session,
 				shots: updatedShots,
+				completed: currentRep + 1 >= session.shots.length ? true : session.completed,
 			}
 
-			helpers.updateSession(session.id, updatedSession)
 			setSession(updatedSession)
+			fetcher.submit(
+				{ intent: 'update-session', session: JSON.stringify(updatedSession) },
+				{ method: 'POST' },
+			)
 
 			if (currentRep + 1 >= session.shots.length) {
-				// Complete the session
-				helpers.completeSession(session.id)
 				setRepState('complete')
 			} else {
 				// Move to next rep and start automatically
@@ -249,7 +267,7 @@ export default function DrillSession() {
 				startRep()
 			}
 		},
-		[session, repState, currentRep, helpers, startRep],
+		[session, repState, currentRep, startRep, fetcher],
 	)
 
 	const handleFinish = () => {

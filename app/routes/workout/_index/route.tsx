@@ -1,18 +1,18 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useWorkoutTrackerContext } from '../context.client'
+import type { Route } from './+types/route'
 import {
 	formatDisplayDate,
 	getMaxWeightByExercise,
 	getTodayKey,
-} from '../data.client'
+} from '../utils'
 
 export const meta: MetaFunction = () => [{ title: 'Workout Tracker' }]
 
-export default function WorkoutHome() {
+export default function WorkoutHome({ matches }: Route.ComponentProps) {
 	const navigate = useNavigate()
-	const { data } = useWorkoutTrackerContext()
+	const data = matches[1].loaderData.data
 	const todayKey = getTodayKey()
 	const todaysWorkout = data.workouts[todayKey] ?? null
 	const templateLookup = useMemo(() => {

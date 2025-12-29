@@ -1,17 +1,41 @@
-import { useNavigate } from 'react-router'
+import { useEffect } from 'react'
+import { useNavigate, useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useDryFireTrackerContext } from '../context.client'
+import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
+import { createSession } from '../data.server'
 
-export const meta: MetaFunction = () => [{ title: 'Dry-Fire Trainer' }]
+export const meta: MetaFunction = () => [{ title: 'Dry Fire Trainer' }]
 
-export default function DryFireTrainerHome() {
+export const action = async ({ request, context }: Route.ActionArgs) => {
+	const db = getDb(context.cloudflare.env);
+	const formData = await request.formData();
+	const intent = formData.get('intent');
+
+	if (intent === 'create-session') {
+		const drillId = formData.get('drillId') as string;
+		const session = await createSession(db, drillId);
+		return { sessionId: session.id };
+	}
+
+	return { success: false };
+}
+
+export default function DryFireTrainerHome({ matches }: Route.ComponentProps) {
 	const navigate = useNavigate()
-	const { data, helpers } = useDryFireTrackerContext()
+	const fetcher = useFetcher()
+	const data = matches[1].loaderData.data
 
 	const handleStartDrill = (drillId: string) => {
-		const session = helpers.createSession(drillId)
-		void navigate(`/dry-fire-trainer/session/${session.id}`)
+		fetcher.submit({ intent: 'create-session', drillId }, { method: 'POST' })
 	}
+
+	// Navigate when session is created
+	useEffect(() => {
+		if (fetcher.data && (fetcher.data as any).sessionId) {
+			void navigate(`/dry-fire-trainer/session/${(fetcher.data as any).sessionId}`)
+		}
+	}, [fetcher.data, navigate])
 
 	return (
 		<div className="space-y-6">

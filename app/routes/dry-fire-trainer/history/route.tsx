@@ -1,16 +1,34 @@
 import { useState } from 'react'
+import { useFetcher } from 'react-router'
 import type { MetaFunction } from 'react-router'
-import { useDryFireTrackerContext } from '../context.client'
-import { calculateSessionStats, formatSessionDate } from '../data.client'
-import type { Session } from '../data.client'
+import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
+import { deleteSession } from '../data.server'
+import { calculateSessionStats, formatSessionDate } from '../utils'
+import type { Session } from '../data.server'
 import { ShotResultsChart } from '../shot-results-chart'
 
 export const meta: MetaFunction = () => [
 	{ title: 'History - Dry-Fire Trainer' },
 ]
 
-export default function DryFireTrainerHistory() {
-	const { data, helpers } = useDryFireTrackerContext()
+export const action = async ({ request, context }: Route.ActionArgs) => {
+	const db = getDb(context.cloudflare.env);
+	const formData = await request.formData();
+	const intent = formData.get('intent');
+
+	if (intent === 'delete-session') {
+		const sessionId = formData.get('sessionId') as string;
+		await deleteSession(db, sessionId);
+		return { success: true };
+	}
+
+	return { success: false };
+}
+
+export default function DryFireTrainerHistory({ matches }: Route.ComponentProps) {
+	const data = matches[1].loaderData.data
+	const fetcher = useFetcher()
 	const [selectedSession, setSelectedSession] = useState<Session | null>(null)
 
 	const completedSessions = data.sessions
@@ -19,7 +37,10 @@ export default function DryFireTrainerHistory() {
 
 	const handleDelete = (session: Session) => {
 		if (confirm(`Delete session from ${formatSessionDate(session.date)}?`)) {
-			helpers.deleteSession(session.id)
+			fetcher.submit(
+				{ intent: 'delete-session', sessionId: session.id },
+				{ method: 'POST' },
+			)
 			if (selectedSession?.id === session.id) {
 				setSelectedSession(null)
 			}

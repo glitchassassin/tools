@@ -1,4 +1,4 @@
-import type { Session } from './data.client'
+import type { Session } from './data.server'
 
 export function ShotResultsChart({ session }: { session: Session }) {
 	return (
