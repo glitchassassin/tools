@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import type { MetaFunction } from 'react-router'
 import { useFetcher } from 'react-router'
-import { getDb } from '~/db/client.server'
 import type { Session } from '../data.server'
 import { deleteSession } from '../data.server'
 import { ShotResultsChart } from '../shot-results-chart'
 import { calculateSessionStats, formatSessionDate } from '../utils'
 import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
 
 export const meta: MetaFunction = () => [
 	{ title: 'History - Dry-Fire Trainer' },
@@ -28,7 +28,7 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 
 export default function DryFireTrainerHistory({ matches }: Route.ComponentProps) {
 	const data = matches[1].loaderData.data
-	const fetcher = useFetcher()
+	const fetcher = useFetcher<typeof action>()
 	const [selectedSession, setSelectedSession] = useState<Session | null>(null)
 
 	const completedSessions = data.sessions

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { MetaFunction } from 'react-router'
 import { useFetcher, useNavigate } from 'react-router'
-import { RepsSpinner } from '~/components/reps-spinner'
-import { getDb } from '~/db/client.server'
 import type { WorkoutEntry } from '../data.server'
 import { deleteWorkout, getWorkoutData, upsertWorkout } from '../data.server'
 import {
@@ -14,6 +12,8 @@ import {
 	getTodayKey,
 } from '../utils'
 import type { Route } from './+types/route'
+import { RepsSpinner } from '~/components/reps-spinner'
+import { getDb } from '~/db/client.server'
 
 export const meta: MetaFunction = ({ params }) => {
 	const date = (params?.date as string | undefined) ?? getTodayKey()
@@ -61,7 +61,7 @@ export const action = async ({ request, params, context }: Route.ActionArgs) => 
 
 export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkout }, params, matches }: Route.ComponentProps) {
 	const navigate = useNavigate()
-	const fetcher = useFetcher()
+	const fetcher = useFetcher<typeof action>()
 	const date = params.date ?? getTodayKey()
 	const data = matches[1].loaderData.data
 
@@ -111,7 +111,7 @@ export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkou
 				{ method: 'POST' },
 			)
 		}
-	}, [activeTemplate, workout, date])
+	}, [activeTemplate, workout, date, fetcher])
 
 	useEffect(() => {
 		if (!deleteConfirm) return

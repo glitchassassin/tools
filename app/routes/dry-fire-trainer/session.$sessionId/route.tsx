@@ -141,10 +141,9 @@ class AudioSystem {
 	}
 }
 
-export default function DrillSession({ loaderData: { session: loaderSession, dryFireData: data }, params }: Route.ComponentProps) {
-	// const { sessionId } = params
+export default function DrillSession({ loaderData: { session: loaderSession, dryFireData: data } }: Route.ComponentProps) {
 	const navigate = useNavigate()
-	const fetcher = useFetcher()
+	const fetcher = useFetcher<typeof action>()
 	
 	const [session, setSession] = useState<Session>(loaderSession)
 	const [currentRep, setCurrentRep] = useState(0)

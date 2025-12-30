@@ -46,48 +46,11 @@ function escapeForRegex(text: string) {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function serializeModelData<T>(data: T) {
-	return JSON.stringify({ version: 0, data })
-}
 
 
 
-const DEFAULT_TEST_CONFIG = {
-	templates: [
-		{
-			id: 'workout-a',
-			name: 'Workout A',
-			exercises: [
-				{ id: 'squat', name: 'Squat', setCount: 5 },
-				{ id: 'overhead-press', name: 'Overhead Press', setCount: 5 },
-				{ id: 'deadlift', name: 'Deadlift', setCount: 1 },
-			],
-		},
-		{
-			id: 'workout-b',
-			name: 'Workout B',
-			exercises: [
-				{ id: 'squat', name: 'Squat', setCount: 5 },
-				{ id: 'bench-press', name: 'Bench Press', setCount: 5 },
-				{ id: 'barbell-row', name: 'Barbell Row', setCount: 5 },
-			],
-		},
-	],
-	bonusLabel: 'Pull-ups',
-	plates: [45, 35, 25, 10, 5, 2.5],
-} satisfies {
-	templates: Array<{
-		id: string
-		name: string
-		exercises: Array<{
-			id: string
-			name: string
-			setCount: number
-		}>
-	}>
-	bonusLabel: string
-	plates: number[]
-}
+
+
 
 
 
@@ -187,6 +150,10 @@ async function recordHistoryWorkouts(page: Page) {
 	await setExerciseWeight(page, 'Barbell Row', '155')
 	await setBonusReps(page, '6')
 }
+
+test.beforeEach(async ({ page }) => {
+	await page.request.post('/api/test/reset-db')
+})
 
 test.describe('Workout Tracker – Index Route', () => {
 	test('Start a fresh workout from the landing page', async ({ page }) => {

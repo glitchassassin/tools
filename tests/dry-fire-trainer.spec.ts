@@ -1,8 +1,9 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test } from '@playwright/test'
+import { expect, test  } from '@playwright/test'
+import type {Page} from '@playwright/test';
 
 // Fixture to create a drill with randomized name and 1 rep
-async function createTestDrill(page: any): Promise<string> {
+async function createTestDrill(page: Page): Promise<string> {
 	const drillName = `Test Drill ${Math.random().toString(36).substring(2, 8)}`
 
 	// Navigate to Settings tab
@@ -28,6 +29,7 @@ async function createTestDrill(page: any): Promise<string> {
 
 test.describe('Dry-Fire Trainer', () => {
 	test.beforeEach(async ({ page }) => {
+		await page.request.post('/api/test/reset-db')
 		await page.goto('/')
 		await page.getByRole('link', { name: 'Dry-Fire Trainer' }).click()
 		await expect(page).toHaveURL('/dry-fire-trainer')
