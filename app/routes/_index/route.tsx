@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useFetcher } from 'react-router'
 import { getDb } from '~/db/client.server'
 import { getWorkoutData } from '~/routes/workout/data.server'
 import type { Route } from './+types/route'
+import { getMeditationContent, updateMeditationContent } from './meditation.server'
 
 export function meta({}: Route.MetaArgs) {
 	return [
@@ -14,9 +15,30 @@ export function meta({}: Route.MetaArgs) {
 	]
 }
 
+export const action = async ({ request, context }: Route.ActionArgs) => {
+	const db = getDb(context.cloudflare.env)
+	const formData = await request.formData()
+	const content = formData.get('content') as string
+	await updateMeditationContent(db, content)
+	return { success: true }
+}
+
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+export const clientAction = async ({ serverAction }: Route.ClientActionArgs) => {
+	if (debounceTimer) clearTimeout(debounceTimer)
+
+	return new Promise((resolve) => {
+		debounceTimer = setTimeout(() => {
+			resolve(serverAction())
+		}, 1000)
+	})
+}
+
 export const loader = async ({ context }: Route.LoaderArgs) => {
 	const db = getDb(context.cloudflare.env)
 	const { workouts } = await getWorkoutData(db)
+	const meditationContent = await getMeditationContent(db)
 
 	let maxSquat = 0
 	let maxDeadlift = 0
@@ -38,6 +60,7 @@ export const loader = async ({ context }: Route.LoaderArgs) => {
 
 	return {
 		weightliftingTotal: maxSquat + maxDeadlift + maxBench,
+		meditationContent,
 	}
 }
 
@@ -67,7 +90,7 @@ const QUOTES = [
 
 export default function Home({ loaderData }: Route.ComponentProps) {
 	const [quoteIndex, setQuoteIndex] = useState(0)
-	const { weightliftingTotal } = loaderData
+	const { weightliftingTotal, meditationContent } = loaderData
 
 	useEffect(() => {
 		const interval = setInterval(() => {
@@ -154,6 +177,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 					</div>
 				</DashboardCard>
 
+				<MeditationCard initialContent={meditationContent} />
+
 				{/* Vision Card */}
 				<DashboardCard title="Vision">
 					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-1">
@@ -188,7 +213,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				</DashboardCard>
 
 				{/* Wisdom Card */}
-				<DashboardCard title="Wisdom" className="md:col-span-2">
+				<DashboardCard title="Wisdom">
 					<blockquote className="space-y-6">
 						<p className="text-2xl leading-relaxed italic text-balance">
 							"{quote.text}"
@@ -204,6 +229,31 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				<p>&copy; {new Date().getFullYear()} Jon Winsley</p>
 			</footer>
 		</main>
+	)
+}
+
+function MeditationCard({ initialContent }: { initialContent: string }) {
+	const fetcher = useFetcher()
+	const [content, setContent] = useState(initialContent)
+	const isPending = content !== initialContent
+
+	return (
+		<DashboardCard title="Meditation">
+			<fetcher.Form method="post">
+				<textarea
+					name="content"
+					value={content}
+					onChange={(e) => {
+						setContent(e.target.value)
+						void fetcher.submit(e.currentTarget.form)
+					}}
+					placeholder="Write your thoughts here..."
+					className={`bg-app-surface/50 text-app-foreground min-h-[200px] w-full resize-none rounded-xl border p-4 transition-all focus:ring-2 focus:ring-primary/50 focus:outline-none ${
+						isPending ? 'animate-pending' : 'border-app-border'
+					}`}
+				/>
+			</fetcher.Form>
+		</DashboardCard>
 	)
 }
 

@@ -58,3 +58,20 @@
 		color: var(--color-primary-foreground);
 	}
 }
+
+@keyframes border-pulse {
+	0% {
+		border-color: hsla(0, 0%, 100%, 0.08);
+	}
+	50% {
+		border-color: var(--color-primary);
+	}
+	100% {
+		border-color: hsla(0, 0%, 100%, 0.08);
+	}
+}
+
+.animate-pending {
+	animation: border-pulse 1.5s infinite;
+}
+

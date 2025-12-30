@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 // Workout Tracker
 export const workoutSettings = sqliteTable('workout_settings', {
@@ -42,3 +42,8 @@ export const dryFireSessions = sqliteTable('dry_fire_sessions', {
   shots: text('shots', { mode: 'json' }).$type<{ result: 'hit' | 'slow' | 'miss' | null }[]>().notNull(),
   completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
 });
+// Meditation
+export const meditation = sqliteTable('meditation', {
+	id: integer('id').primaryKey(), // id = 1
+	content: text('content').notNull().default(''),
+})
