@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { getDb } from '~/db/client.server'
+import { getWorkoutData } from '~/routes/workout/data.server'
 import type { Route } from './+types/route'
 
 export function meta({}: Route.MetaArgs) {
@@ -10,6 +12,33 @@ export function meta({}: Route.MetaArgs) {
 			content: 'Building discipline, momentum, and mastery.',
 		},
 	]
+}
+
+export const loader = async ({ context }: Route.LoaderArgs) => {
+	const db = getDb(context.cloudflare.env)
+	const { workouts } = await getWorkoutData(db)
+
+	let maxSquat = 0
+	let maxDeadlift = 0
+	let maxBench = 0
+
+	Object.values(workouts).forEach((workout) => {
+		workout.exercises.forEach((exercise) => {
+			if (exercise.weight) {
+				if (exercise.id === 'squat') {
+					maxSquat = Math.max(maxSquat, exercise.weight)
+				} else if (exercise.id === 'deadlift') {
+					maxDeadlift = Math.max(maxDeadlift, exercise.weight)
+				} else if (exercise.id === 'bench-press') {
+					maxBench = Math.max(maxBench, exercise.weight)
+				}
+			}
+		})
+	})
+
+	return {
+		weightliftingTotal: maxSquat + maxDeadlift + maxBench,
+	}
 }
 
 const TOOLS = [
@@ -36,8 +65,9 @@ const QUOTES = [
 	},
 ]
 
-export default function Home() {
+export default function Home({ loaderData }: Route.ComponentProps) {
 	const [quoteIndex, setQuoteIndex] = useState(0)
+	const { weightliftingTotal } = loaderData
 
 	useEffect(() => {
 		const interval = setInterval(() => {
@@ -112,7 +142,11 @@ export default function Home() {
 				{/* Goals Card */}
 				<DashboardCard title="Goals">
 					<div className="space-y-5">
-						<GoalItem title="Weightlifting (1000lb Club)" current={535} total={1000} />
+						<GoalItem
+							title="Weightlifting (1000lb Club)"
+							current={weightliftingTotal}
+							total={1000}
+						/>
 						<GoalItem title="Shooting (Perfect Qual)" current={190} total={240} />
 						<GoalItem title="Career (Projects w/ Users)" current={2} total={10} />
 						<GoalItem title="Nonfiction (Cert Essays)" current={0} total={44} />
