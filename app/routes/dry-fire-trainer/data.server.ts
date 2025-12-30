@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import type { Db } from '~/db/client.server'
-import { dryFireSettings, dryFireDrills, dryFireSessions } from '~/db/schema'
+import { dryFireDrills, dryFireSessions, dryFireSettings } from '~/db/schema'
 
 export const DrillConfigSchema = z.object({
 	id: z.string(),
@@ -59,13 +59,14 @@ const DEFAULT_DRILLS: DrillConfig[] = [
 export async function getDryFireData(db: Db): Promise<DryFireData> {
 	let settings = await db.select().from(dryFireSettings).where(eq(dryFireSettings.id, 1)).get()
 	if (!settings) {
-		settings = await db.insert(dryFireSettings).values({ id: 1, chaosMode: false }).returning().get()
+		await db.insert(dryFireSettings).values({ id: 1, chaosMode: false }).onConflictDoNothing({ target: dryFireSettings.id }).run()
+		settings = await db.select().from(dryFireSettings).where(eq(dryFireSettings.id, 1)).get()
 	}
 
 	let drills = await db.select().from(dryFireDrills).all()
 	if (drills.length === 0) {
 		for (const drill of DEFAULT_DRILLS) {
-			await db.insert(dryFireDrills).values(drill).run()
+			await db.insert(dryFireDrills).values(drill).onConflictDoNothing({ target: dryFireDrills.id }).run()
 		}
 		drills = await db.select().from(dryFireDrills).all()
 	}
@@ -73,13 +74,13 @@ export async function getDryFireData(db: Db): Promise<DryFireData> {
 	const sessions = await db.select().from(dryFireSessions).all()
 
 	return {
-		drills: drills.map((d: any) => ({
+		drills: drills.map((d) => ({
 			id: d.id,
 			name: d.name,
 			parTime: d.parTime,
 			reps: d.reps,
 		})),
-		sessions: sessions.map((s: any) => ({
+		sessions: sessions.map((s) => ({
 			id: s.id,
 			date: s.date,
 			drillId: s.drillId,

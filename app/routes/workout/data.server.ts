@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
+import invariant from 'tiny-invariant';
 import { z } from 'zod';
-import type {Db} from '~/db/client.server';
-import { workoutSettings, workoutTemplates, workoutEntries } from '~/db/schema';
+import type { Db } from '~/db/client.server';
+import { workoutEntries, workoutSettings, workoutTemplates } from '~/db/schema';
 
 export const WorkoutExerciseConfigSchema = z.object({
 	id: z.string(),
@@ -75,16 +76,22 @@ export async function getWorkoutData(db: Db) {
 	});
 
 	if (!settings) {
-		[settings] = await db.insert(workoutSettings).values({
+		await db.insert(workoutSettings).values({
 			id: 1,
 			bonusLabel: 'Pull-ups',
 			plates: [45, 35, 25, 10, 5, 2.5],
-		}).returning();
+		}).onConflictDoNothing({ target: workoutSettings.id }).run();
+		
+		settings = await db.query.workoutSettings.findFirst({
+			where: eq(workoutSettings.id, 1),
+		});
 	}
+
+	invariant(settings, 'Workout settings not found');
 
 	let templates = await db.query.workoutTemplates.findMany();
 	if (templates.length === 0) {
-		await db.insert(workoutTemplates).values(DEFAULT_TEMPLATES);
+		await db.insert(workoutTemplates).values(DEFAULT_TEMPLATES).onConflictDoNothing({ target: workoutTemplates.id }).run();
 		templates = await db.query.workoutTemplates.findMany();
 	}
 
@@ -105,30 +112,30 @@ export async function getWorkoutData(db: Db) {
 }
 
 export async function upsertWorkout(db: Db, entry: WorkoutEntry) {
-    return db.insert(workoutEntries).values(entry).onConflictDoUpdate({
+    await db.insert(workoutEntries).values(entry).onConflictDoUpdate({
         target: workoutEntries.date,
         set: {
             templateId: entry.templateId,
             exercises: entry.exercises,
             bonusReps: entry.bonusReps,
         }
-    }).returning();
+    }).run();
 }
 
 export async function deleteWorkout(db: Db, date: string) {
-    return db.delete(workoutEntries).where(eq(workoutEntries.date, date));
+    await db.delete(workoutEntries).where(eq(workoutEntries.date, date)).run();
 }
 
 export async function updateWorkoutSettings(db: Db, settings: { bonusLabel?: string, plates?: number[] }) {
-    return db.update(workoutSettings).set(settings).where(eq(workoutSettings.id, 1)).returning();
+    await db.update(workoutSettings).set(settings).where(eq(workoutSettings.id, 1)).run();
 }
 
 export async function upsertWorkoutTemplate(db: Db, template: WorkoutTemplate) {
-    return db.insert(workoutTemplates).values(template).onConflictDoUpdate({
+    await db.insert(workoutTemplates).values(template).onConflictDoUpdate({
         target: workoutTemplates.id,
         set: {
             name: template.name,
             exercises: template.exercises,
         }
-    }).returning();
+    }).run();
 }

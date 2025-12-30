@@ -2,7 +2,6 @@ import type { FormEvent } from 'react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import type { MetaFunction } from 'react-router'
 import { useFetcher } from 'react-router'
-import { getDb } from '~/db/client.server'
 import type {
 	WorkoutExerciseConfig,
 	WorkoutTemplate,
@@ -10,6 +9,7 @@ import type {
 } from '../data.server'
 import { updateWorkoutSettings, upsertWorkoutTemplate } from '../data.server'
 import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
 
 export const meta: MetaFunction = () => [{ title: 'Workout Settings' }]
 
@@ -37,16 +37,26 @@ type DraftConfig = WorkoutTrackerData['config']
 
 export default function WorkoutSettingsRoute({ matches }: Route.ComponentProps) {
 	const data = matches[1].loaderData.data
-	const fetcher = useFetcher()
+	const fetcher = useFetcher<typeof action>()
 	const [draftConfig, setDraftConfig] = useState<DraftConfig>(data.config)
 	const [platesInput, setPlatesInput] = useState(data.config.plates.join(', '))
-	const [status, setStatus] = useState<'idle' | 'saved'>('idle')
+	const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
 
 
 	useEffect(() => {
 		setDraftConfig(data.config)
 		setPlatesInput(data.config.plates.join(', '))
 	}, [data.config])
+
+	useEffect(() => {
+		if (fetcher.state === 'submitting') {
+			setStatus('saving')
+		} else if (fetcher.state === 'idle' && status === 'saving') {
+			setStatus('saved')
+			const timeoutId = setTimeout(() => setStatus('idle'), 2500)
+			return () => clearTimeout(timeoutId)
+		}
+	}, [fetcher.state, status])
 
 	const handleTemplateExerciseChange = (
 		templateIndex: number,
@@ -143,8 +153,6 @@ export default function WorkoutSettingsRoute({ matches }: Route.ComponentProps) 
 			},
 			{ method: 'POST' },
 		)
-		setStatus('saved')
-		setTimeout(() => setStatus('idle'), 2500)
 	}
 
 	return (

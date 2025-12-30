@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { MetaFunction } from 'react-router'
 import { useFetcher } from 'react-router'
-import { getDb } from '~/db/client.server'
 import type { DrillConfig } from '../data.server'
 import { deleteDrill, updateDryFireSettings, upsertDrill } from '../data.server'
 import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
 
 export const meta: MetaFunction = () => [
 	{ title: 'Settings - Dry-Fire Trainer' },
@@ -40,7 +40,7 @@ type DrillFormData = Omit<DrillConfig, 'id'>
 
 export default function DryFireTrainerSettings({ matches }: Route.ComponentProps) {
 	const data = matches[1].loaderData.data
-	const fetcher = useFetcher()
+	const fetcher = useFetcher<typeof action>()
 	const [editingDrill, setEditingDrill] = useState<DrillConfig | null>(null)
 	const [isAddingDrill, setIsAddingDrill] = useState(false)
 	const [formData, setFormData] = useState<DrillFormData>({
@@ -72,6 +72,12 @@ export default function DryFireTrainerSettings({ matches }: Route.ComponentProps
 		setError(null)
 	}
 
+	useEffect(() => {
+		if (fetcher.state === 'idle' && fetcher.data && 'success' in fetcher.data && fetcher.data.success) {
+			handleCancel()
+		}
+	}, [fetcher.state, fetcher.data])
+
 	const handleSave = () => {
 		if (!formData.name.trim()) {
 			setError('Name is required')
@@ -95,7 +101,6 @@ export default function DryFireTrainerSettings({ matches }: Route.ComponentProps
 			{ intent: 'upsert-drill', drill: JSON.stringify(drill) },
 			{ method: 'POST' },
 		)
-		handleCancel()
 	}
 
 	const handleDelete = (drill: DrillConfig) => {

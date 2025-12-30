@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import type { MetaFunction } from 'react-router'
 import { useFetcher, useNavigate } from 'react-router'
-import { getDb } from '~/db/client.server'
 import { createSession } from '../data.server'
 import type { Route } from './+types/route'
+import { getDb } from '~/db/client.server'
 
 export const meta: MetaFunction = () => [{ title: 'Dry Fire Trainer' }]
 
@@ -23,7 +23,7 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 
 export default function DryFireTrainerHome({ matches }: Route.ComponentProps) {
 	const navigate = useNavigate()
-	const fetcher = useFetcher()
+	const fetcher = useFetcher<typeof action>()
 	const data = matches[1].loaderData.data
 
 	const handleStartDrill = (drillId: string) => {
@@ -32,10 +32,11 @@ export default function DryFireTrainerHome({ matches }: Route.ComponentProps) {
 
 	// Navigate when session is created
 	useEffect(() => {
-		if (fetcher.data && (fetcher.data as any).sessionId) {
-			void navigate(`/dry-fire-trainer/session/${(fetcher.data as any).sessionId}`)
+		if (fetcher.state === 'idle' && fetcher.data && 'sessionId' in fetcher.data) {
+			const sessionId = fetcher.data.sessionId
+			void navigate(`/dry-fire-trainer/session/${sessionId}`)
 		}
-	}, [fetcher.data, navigate])
+	}, [fetcher.state, fetcher.data, navigate])
 
 	return (
 		<div className="space-y-6">
