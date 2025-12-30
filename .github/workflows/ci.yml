@@ -41,6 +41,9 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      - name: Run local D1 migrations
+        run: npx wrangler d1 migrations apply tools-db --local
+
       - name: Run Playwright tests
         run: npx playwright test
 
@@ -129,11 +132,18 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
 
+      - name: Run database migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply tools-db --remote
+
       - name: Output deployment success
         run: |
-          echo "✅ Production deployment successful!"
+          echo "✅ Production deployment and migrations successful!"
 
           # Output to step summary
           echo "## 🎉 Production Deployment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Status:** Successfully deployed to production" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Status:** Successfully deployed to production and applied migrations" >> $GITHUB_STEP_SUMMARY
