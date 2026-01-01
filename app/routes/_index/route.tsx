@@ -104,7 +104,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 	return (
 		<main className="mx-auto flex min-h-svh w-full max-w-[1400px] flex-col gap-12 px-6 pt-16 pb-16 sm:px-10 lg:pt-24">
 			<header className="space-y-4 text-center text-balance sm:text-left">
-				<h1 className="text-4xl font-bold tracking-tight text-white sm:text-7xl">
+				<h1 className="flex items-center justify-center gap-4 text-4xl font-bold tracking-tight text-white sm:justify-start sm:text-7xl">
+					<div
+						className="bg-current h-12 w-12 shrink-0 sm:h-20 sm:w-20"
+						style={{
+							maskImage: 'url(/fox.svg)',
+							WebkitMaskImage: 'url(/fox.svg)',
+							maskSize: 'contain',
+							WebkitMaskSize: 'contain',
+							maskRepeat: 'no-repeat',
+							WebkitMaskRepeat: 'no-repeat',
+						}}
+					/>
 					Toolbox of Destiny
 				</h1>
 				<p className="text-primary text-lg font-semibold sm:text-2xl">

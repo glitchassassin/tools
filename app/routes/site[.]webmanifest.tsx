@@ -18,7 +18,7 @@ interface WebManifest {
 export async function loader() {
 	const manifest: WebManifest = {
 		name: 'Toolbox of Destiny',
-		short_name: 'Toolbox of Destiny',
+		short_name: 'ToD',
 		description: 'Building discipline, momentum, and mastery',
 		start_url: '/',
 		display: 'standalone',
@@ -26,12 +26,12 @@ export async function loader() {
 		theme_color: '#f59e0b',
 		icons: [
 			{
-				src: '/assets/android-chrome-192x192.png',
+				src: '/assets/web-app-manifest-192x192.png',
 				sizes: '192x192',
 				type: 'image/png',
 			},
 			{
-				src: '/assets/android-chrome-512x512.png',
+				src: '/assets/web-app-manifest-512x512.png',
 				sizes: '512x512',
 				type: 'image/png',
 			},
