@@ -102,7 +102,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 	const quote = QUOTES[quoteIndex]
 
 	return (
-		<main className="mx-auto flex min-h-svh w-full max-w-[1400px] flex-col gap-12 px-6 pt-16 pb-16 sm:px-10 lg:pt-24">
+		<main className="relative mx-auto flex min-h-svh w-full max-w-[1400px] flex-col gap-12 px-6 pt-16 pb-16 sm:px-10 lg:pt-24">
+			<a
+				href="https://github.com/glitchassassin/tools/"
+				target="_blank"
+				rel="noopener noreferrer"
+				className="text-app-muted hover:text-white absolute top-6 right-6 transition-colors sm:top-10 sm:right-10"
+				aria-label="GitHub Repository"
+			>
+				<div
+					className="h-6 w-6 bg-current sm:h-8 sm:w-8"
+					style={{
+						maskImage: 'url(/github.svg)',
+						WebkitMaskImage: 'url(/github.svg)',
+						maskSize: 'contain',
+						WebkitMaskSize: 'contain',
+						maskRepeat: 'no-repeat',
+						WebkitMaskRepeat: 'no-repeat',
+					}}
+				/>
+			</a>
 			<header className="space-y-4 text-center text-balance sm:text-left">
 				<h1 className="flex items-center justify-center gap-4 text-4xl font-bold tracking-tight text-white sm:justify-start sm:text-7xl">
 					<div
