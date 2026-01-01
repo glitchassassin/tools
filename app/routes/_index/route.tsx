@@ -170,6 +170,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							status="Active"
 							tasks={[{ label: 'Prove out Fluro sync', done: false }]}
 						/>
+						<ProjectGroup
+							title="Make a will"
+							status="Active"
+							tasks={[
+								{ label: 'Nail down details with Eileen', done: false },
+								{ label: 'Draft documents', done: false },
+								{ label: 'Get documents witnessed/notarized', done: false },
+							]}
+						/>
 					</div>
 				</DashboardCard>
 
