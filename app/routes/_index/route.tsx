@@ -67,6 +67,8 @@ export const loader = async ({ context }: Route.LoaderArgs) => {
 const TOOLS = [
 	{ name: 'Workout Tracker', to: '/workout', icon: '/barbell.svg' },
 	{ name: 'Dry-Fire Trainer', to: '/dry-fire-trainer', icon: '/handgun.svg' },
+	{ name: 'Armorer', to: 'https://armorer.io/', icon: '/armorer.png' },
+	{ name: 'Deacon Notes', to: 'https://deaconnotes.com/', icon: '/praying.svg' },
 ]
 
 const QUOTES = [
@@ -143,26 +145,41 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 			</header>
 
 			<nav className="flex flex-wrap justify-center gap-4 sm:justify-start">
-				{TOOLS.map((tool) => (
-					<Link
-						key={tool.to}
-						to={tool.to}
-						className="bg-app-surface/50 hover:bg-app-surface-strong border-primary/40 hover:border-primary/80 text-app-foreground flex items-center justify-center gap-4 rounded-2xl border px-8 py-6 text-2xl transition-all hover:-translate-y-1 hover:shadow-lg active:scale-95"
-					>
-						<div
-							className="h-10 w-10 shrink-0 bg-current"
-							style={{
-								maskImage: `url(${tool.icon})`,
-								WebkitMaskImage: `url(${tool.icon})`,
-								maskSize: 'contain',
-								WebkitMaskSize: 'contain',
-								maskRepeat: 'no-repeat',
-								WebkitMaskRepeat: 'no-repeat',
-							}}
+				{TOOLS.map((tool) => {
+					const isExternal = tool.to.startsWith('http')
+					const commonProps = {
+						className:
+							'bg-app-surface/50 hover:bg-app-surface-strong border-primary/40 hover:border-primary/80 text-app-foreground flex items-center justify-center gap-4 rounded-2xl border px-8 py-6 text-2xl transition-all hover:-translate-y-1 hover:shadow-lg active:scale-95',
+						children: (
+							<>
+								<div
+									className="h-10 w-10 shrink-0 bg-current"
+									style={{
+										maskImage: `url(${tool.icon})`,
+										WebkitMaskImage: `url(${tool.icon})`,
+										maskSize: 'contain',
+										WebkitMaskSize: 'contain',
+										maskRepeat: 'no-repeat',
+										WebkitMaskRepeat: 'no-repeat',
+									}}
+								/>
+								{tool.name}
+							</>
+						),
+					}
+
+					return isExternal ? (
+						<a
+							key={tool.to}
+							href={tool.to}
+							target="_blank"
+							rel="noopener noreferrer"
+							{...commonProps}
 						/>
-						{tool.name}
-					</Link>
-				))}
+					) : (
+						<Link key={tool.to} to={tool.to} {...commonProps} />
+					)
+				})}
 			</nav>
 
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
