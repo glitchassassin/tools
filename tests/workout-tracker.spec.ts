@@ -499,5 +499,82 @@ test.describe('Workout Tracker – Settings Route', () => {
 		).toContainText('25 + 5 + 1.25')
 	})
 
+	test('Renaming an exercise treats it as a new distinct exercise', async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 430, height: 932 })
 
+		// 1. Record a workout with the OLD name
+		const oldDateWorkoutA = '2025-05-01'
+		await page.goto(`/workout/workout/${oldDateWorkoutA}`)
+		await setExerciseWeight(page, 'Squat', '200')
+
+		// 2. Rename the exercise
+		await page.goto('/workout/settings')
+		const squatInput = page.getByLabel('Exercise name').nth(3)
+		await squatInput.fill('Back Squat')
+		await page.getByRole('button', { name: 'Save settings' }).click()
+		await expect(
+			page.getByText('Settings saved. Existing workouts updated to match.'),
+		).toBeVisible()
+
+		// 3. Verify NEW workout uses NEW name and does NOT inherit old weight
+		const newDate = '2025-05-02'
+		await page.goto(`/workout/workout/${newDate}`)
+		await expect(page.getByText('Back Squat')).toBeVisible()
+		await expect(page.getByText('Squat', { exact: true })).not.toBeVisible()
+
+		await ensureExerciseOpen(page, 'Back Squat')
+		const weightInput = page.getByLabel('Weight (lb)')
+		await expect(weightInput).toHaveValue('')
+	})
+
+	test('Viewing a workout with a deleted exercise shows the exercise\'s original name', async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 430, height: 932 })
+		const date = '2025-06-01'
+
+		// 1. Record a workout with the OLD name
+		await page.goto(`/workout/workout/${date}`)
+		await setExerciseWeight(page, 'Squat', '225')
+
+		// 2. Rename the exercise (effectively deleting "Squat" ID)
+		await page.goto('/workout/settings')
+		const squatInput = page.getByLabel('Exercise name').first()
+		await squatInput.fill('Back Squat')
+		await page.getByRole('button', { name: 'Save settings' }).click()
+		await expect(
+			page.getByText('Settings saved. Existing workouts updated to match.'),
+		).toBeVisible()
+
+		// 3. Visit the old workout and verify the exercise's original name is shown
+		await page.goto(`/workout/workout/${date}`)
+		await expect(page.getByRole('heading', { name: 'Squat', exact: true })).toBeVisible()
+	})
+
+	test('Viewing workout history with deleted exercises shows the exercise\'s original name', async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 430, height: 932 })
+		const date = '2025-06-05'
+
+		// 1. Record a workout with the OLD name
+		await page.goto(`/workout/workout/${date}`)
+		await setExerciseWeight(page, 'Squat', '235')
+
+		// 2. Rename the exercise
+		await page.goto('/workout/settings')
+		const squatInput = page.getByLabel('Exercise name').first()
+		await squatInput.fill('Back Squat')
+		await page.getByRole('button', { name: 'Save settings' }).click()
+		await expect(
+			page.getByText('Settings saved. Existing workouts updated to match.'),
+		).toBeVisible()
+
+		// 3. Visit the workout history and verify the exercise's original name is shown
+		await page.goto('/workout/history')
+		// The history list should show the workout summary
+		await expect(page.getByText('Squat', { exact: true })).toBeVisible()
+	})
 })

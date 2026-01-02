@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useFetcher } from 'react-router'
+import type { Route } from './+types/route'
+import {
+	getMeditationContent,
+	updateMeditationContent,
+} from './meditation.server'
 import { getDb } from '~/db/client.server'
 import { getWorkoutData } from '~/routes/workout/data.server'
-import type { Route } from './+types/route'
-import { getMeditationContent, updateMeditationContent } from './meditation.server'
 
 export function meta({}: Route.MetaArgs) {
 	return [
@@ -25,7 +28,9 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-export const clientAction = async ({ serverAction }: Route.ClientActionArgs) => {
+export const clientAction = async ({
+	serverAction,
+}: Route.ClientActionArgs) => {
 	if (debounceTimer) clearTimeout(debounceTimer)
 
 	return new Promise((resolve) => {
@@ -68,7 +73,11 @@ const TOOLS = [
 	{ name: 'Workout Tracker', to: '/workout', icon: '/barbell.svg' },
 	{ name: 'Dry-Fire Trainer', to: '/dry-fire-trainer', icon: '/handgun.svg' },
 	{ name: 'Armorer', to: 'https://armorer.io/', icon: '/armorer.png' },
-	{ name: 'Deacon Notes', to: 'https://deaconnotes.com/', icon: '/praying.svg' },
+	{
+		name: 'Deacon Notes',
+		to: 'https://deaconnotes.com/',
+		icon: '/praying.svg',
+	},
 ]
 
 const QUOTES = [
@@ -109,7 +118,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				href="https://github.com/glitchassassin/tools/"
 				target="_blank"
 				rel="noopener noreferrer"
-				className="text-app-muted hover:text-white absolute top-6 right-6 transition-colors sm:top-10 sm:right-10"
+				className="text-app-muted absolute top-6 right-6 transition-colors hover:text-white sm:top-10 sm:right-10"
 				aria-label="GitHub Repository"
 			>
 				<div
@@ -127,7 +136,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 			<header className="space-y-4 text-center text-balance sm:text-left">
 				<h1 className="flex items-center justify-center gap-4 text-4xl font-bold tracking-tight text-white sm:justify-start sm:text-7xl">
 					<div
-						className="bg-current h-12 w-12 shrink-0 sm:h-20 sm:w-20"
+						className="h-12 w-12 shrink-0 bg-current sm:h-20 sm:w-20"
 						style={{
 							maskImage: 'url(/fox.svg)',
 							WebkitMaskImage: 'url(/fox.svg)',
@@ -226,8 +235,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							current={weightliftingTotal}
 							total={1000}
 						/>
-						<GoalItem title="Shooting (Perfect Qual)" current={190} total={240} />
-						<GoalItem title="Career (Projects w/ Users)" current={2} total={10} />
+						<GoalItem
+							title="Shooting (Perfect Qual)"
+							current={190}
+							total={240}
+						/>
+						<GoalItem
+							title="Career (Projects w/ Users)"
+							current={2}
+							total={10}
+						/>
 						<GoalItem title="Nonfiction (Cert Essays)" current={0} total={44} />
 						<GoalItem title="Fiction (Short Stories)" current={0} total={10} />
 					</div>
@@ -242,7 +259,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							title="Improvement"
 							items={['Writing', 'Hospitality', 'Prayer']}
 						/>
-						<DashboardCardGroup title="Plans" items={['Christmas', 'Family Vacation']} />
+						<DashboardCardGroup
+							title="Plans"
+							items={['Christmas', 'Family Vacation']}
+						/>
 						<DashboardCardGroup
 							title="Dreams"
 							items={[
@@ -271,10 +291,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				{/* Wisdom Card */}
 				<DashboardCard title="Wisdom">
 					<blockquote className="space-y-6">
-						<p className="text-2xl leading-relaxed italic text-balance">
+						<p className="text-2xl leading-relaxed text-balance italic">
 							"{quote.text}"
 						</p>
-						<cite className="text-primary not-italic block text-lg font-semibold tracking-wide">
+						<cite className="text-primary block text-lg font-semibold tracking-wide not-italic">
 							— {quote.author}
 						</cite>
 					</blockquote>
@@ -304,7 +324,7 @@ function MeditationCard({ initialContent }: { initialContent: string }) {
 						void fetcher.submit(e.currentTarget.form)
 					}}
 					placeholder="Write your thoughts here..."
-					className={`bg-app-surface/50 text-app-foreground min-h-[200px] w-full resize-none rounded-xl border p-4 transition-all focus:ring-2 focus:ring-primary/50 focus:outline-none ${
+					className={`bg-app-surface/50 text-app-foreground focus:ring-primary/50 min-h-[200px] w-full resize-none rounded-xl border p-4 transition-all focus:ring-2 focus:outline-none ${
 						isPending ? 'animate-pending' : 'border-app-border'
 					}`}
 				/>
@@ -347,7 +367,7 @@ function ProjectGroup({
 		<div className="space-y-3">
 			<div className="flex items-center justify-between">
 				<h3 className="font-semibold">{title}</h3>
-				<span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+				<span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase">
 					{status}
 				</span>
 			</div>
@@ -387,7 +407,7 @@ function GoalItem({
 			</div>
 			<div className="bg-app-surface h-2 w-full overflow-hidden rounded-full border border-white/5">
 				<div
-					className="h-full bg-primary transition-all duration-1000"
+					className="bg-primary h-full transition-all duration-1000"
 					style={{ width: `${percentage}%` }}
 				/>
 			</div>
@@ -395,7 +415,13 @@ function GoalItem({
 	)
 }
 
-function DashboardCardGroup({ title, items }: { title: string; items: string[] }) {
+function DashboardCardGroup({
+	title,
+	items,
+}: {
+	title: string
+	items: string[]
+}) {
 	return (
 		<div className="space-y-2">
 			<h3 className="text-app-muted text-xs font-bold tracking-wider uppercase">

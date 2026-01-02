@@ -4,12 +4,12 @@ import { useFetcher, useNavigate } from 'react-router'
 import type { WorkoutEntry } from '../data.server'
 import { deleteWorkout, getWorkoutData, upsertWorkout } from '../data.server'
 import {
-	alignWorkoutWithTemplate,
-	calculatePlateBreakdown,
-	createWorkoutEntry,
-	formatDisplayDate,
-	formatWorkoutSummary,
-	getTodayKey,
+    alignWorkoutWithTemplate,
+    calculatePlateBreakdown,
+    createWorkoutEntry,
+    formatDisplayDate,
+    formatWorkoutSummary,
+    getTodayKey,
 } from '../utils'
 import type { Route } from './+types/route'
 import { RepsSpinner } from '~/components/reps-spinner'
@@ -255,7 +255,7 @@ export default function WorkoutDetailRoute({ loaderData: { workout: loaderWorkou
 											Exercise
 										</p>
 										<h3 className="text-lg font-semibold">
-											{templateExercise?.name ?? exercise.id}
+											{templateExercise?.name ?? exercise.name ?? exercise.id}
 										</h3>
 									</div>
 									<div className="text-right">

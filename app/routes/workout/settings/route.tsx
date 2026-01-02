@@ -2,12 +2,15 @@ import type { FormEvent } from 'react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import type { MetaFunction } from 'react-router'
 import { useFetcher } from 'react-router'
-import type {
-	WorkoutExerciseConfig,
-	WorkoutTemplate,
-	WorkoutTrackerData,
+import {
+	
+	
+	
+	updateWorkoutSettings,
+	upsertWorkoutTemplate
 } from '../data.server'
-import { updateWorkoutSettings, upsertWorkoutTemplate } from '../data.server'
+import type {WorkoutExerciseConfig, WorkoutTemplate, WorkoutTrackerData} from '../data.server';
+import { slugify } from '../utils'
 import type { Route } from './+types/route'
 import { getDb } from '~/db/client.server'
 
@@ -134,11 +137,15 @@ export default function WorkoutSettingsRoute({ matches }: Route.ComponentProps) 
 		const sanitizedTemplates = draftConfig.templates.map((template) => ({
 			...template,
 			name: template.name.trim() || template.name,
-			exercises: template.exercises.map((exercise) => ({
-				...exercise,
-				name: exercise.name.trim() || exercise.name,
-				setCount: Math.max(1, Math.round(exercise.setCount)),
-			})),
+			exercises: template.exercises.map((exercise) => {
+				const name = exercise.name.trim() || exercise.name
+				return {
+					...exercise,
+					id: slugify(name),
+					name,
+					setCount: Math.max(1, Math.round(exercise.setCount)),
+				}
+			}),
 		}))
 
 		const nextPlates = parsedPlates.length > 0 ? parsedPlates : draftConfig.plates;

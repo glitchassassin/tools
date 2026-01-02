@@ -22,6 +22,7 @@ export const WorkoutExerciseSetSchema = z.object({
 
 export const WorkoutExerciseEntrySchema = z.object({
 	id: z.string(),
+	name: z.string().optional(),
 	weight: z.number().min(0).max(1500).nullable(),
 	sets: z.array(WorkoutExerciseSetSchema),
 })

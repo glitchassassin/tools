@@ -6,6 +6,8 @@
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": "explicit",
-		"source.organizeImports": "explicit"
-	}
+		"source.removeUnusedImports": "explicit"
+	},
+	"eslint.runtime": "node",
+	"eslint.format.enable": true
 }

@@ -1,5 +1,14 @@
 import { format as formatDate, isValid, parse } from 'date-fns'
-import type { WorkoutEntry, WorkoutTemplate, WorkoutExerciseEntry } from './data.server'
+import type { WorkoutEntry, WorkoutExerciseEntry, WorkoutTemplate } from './data.server'
+
+export function slugify(text: string) {
+	return text
+		.toLowerCase()
+		.trim()
+		.replace(/[^\w\s-]/g, '')
+		.replace(/[\s_-]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+}
 
 export function getMaxWeightByExercise(data: { workouts: Record<string, WorkoutEntry> }) {
 	const result = new Map<string, number>()
@@ -66,7 +75,7 @@ export function formatWorkoutSummary(
 	const lines: string[] = []
 	for (const exercise of workout.exercises) {
 		const templateExercise = templateExercises.get(exercise.id)
-		const label = templateExercise?.name ?? exercise.id
+		const label = templateExercise?.name ?? exercise.name ?? exercise.id
 		if (exercise.weight == null) continue
 
 		const groups = summarizeSets(exercise)
@@ -140,6 +149,7 @@ export function createWorkoutEntry(
 		templateId: template.id,
 		exercises: template.exercises.map((exercise) => ({
 			id: exercise.id,
+			name: exercise.name,
 			weight: (() => {
 				const previousWeight = findPreviousWeight(exercise.id)
 				return previousWeight != null ? previousWeight + 5 : null
@@ -226,6 +236,8 @@ export function alignWorkoutWithTemplate(
 		if (!existing) {
 			changed = true
 		} else {
+            // Update name to match template if present (renaming existing ID case)
+            // But here ID is same.
 			if (existing.sets.length !== sets.length) {
 				changed = true
 			} else {
@@ -236,14 +248,33 @@ export function alignWorkoutWithTemplate(
 					}
 				}
 			}
+            // If existing didn't have a name, adpot it from template
+            if (!existing.name) {
+                changed = true
+            }
 		}
 
 		exercises.push({
 			id: exerciseId,
+            name: templateExercise.name,
 			weight: existing?.weight ?? null,
 			sets,
 		})
 	}
+
+    // Preserve orphaned exercises that have data
+    for (const exercise of workout.exercises) {
+        if (!templateExercises.has(exercise.id)) {
+            const hasData = exercise.weight != null || exercise.sets.some(s => s.reps > 0);
+            if (hasData) {
+                exercises.push(exercise);
+                // If we are keeping an orphan, we are technically "changing" the aligned structure 
+                // relative to the strict template, but for the purpose of "changed" flag,
+                // if the output list is different from input list, it's changed.
+                // We'll let the length check handle that or explicit checks.
+            }
+        }
+    }
 
 	if (workout.exercises.length !== exercises.length) {
 		changed = true
