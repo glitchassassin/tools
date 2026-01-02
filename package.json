@@ -57,7 +57,7 @@
     "eslint": "^9.37.0",
     "eslint-plugin-unused-imports": "^4.3.0",
     "prettier": "^3.5.3",
-    "prettier-plugin-tailwindcss": "^0.6.12",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "remix-flat-routes": "^0.8.5",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.9.3",
